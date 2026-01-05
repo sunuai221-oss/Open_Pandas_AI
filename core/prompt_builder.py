@@ -486,13 +486,13 @@ def build_followup_prompt(
 
 def detect_intent(question: str) -> Dict[str, Any]:
     """
-    Detecte l'intention globale de la question.
+    Detects the global intention of the question.
     
     Args:
-        question: Question de l'utilisateur
+        question: User's question
     
     Returns:
-        Dict avec les intentions detectees
+        Dict with detected intentions
     """
     question_lower = question.lower()
     
@@ -519,7 +519,7 @@ def detect_intent(question: str) -> Dict[str, Any]:
         ])
     }
     
-    # Determiner le type principal
+    # Determine primary type
     if intents['visualization']:
         intents['type'] = 'visualization'
     elif intents['excel']['export_excel']:
@@ -532,41 +532,41 @@ def detect_intent(question: str) -> Dict[str, Any]:
 
 def get_skill_instructions(skill_ids: List[str]) -> str:
     """
-    Retourne des instructions specifiques pour les skills detectes.
+    Returns specific instructions for detected skills.
     
     Args:
-        skill_ids: Liste des IDs de skills
+        skill_ids: List of skill IDs
     
     Returns:
-        Instructions additionnelles
+        Additional instructions
     """
     instructions = {
         'pivot': (
-            "Pour creer un pivot table :\n"
-            "- Utilise df.pivot_table(values='...', index='...', columns='...', aggfunc='sum')\n"
-            "- N'oublie pas .reset_index() a la fin"
+            "To create a pivot table:\n"
+            "- Use df.pivot_table(values='...', index='...', columns='...', aggfunc='sum')\n"
+            "- Don't forget .reset_index() at the end"
         ),
         'viz': (
-            "Pour les visualisations :\n"
-            "- Stocke le resultat dans 'result'\n"
-            "- Le graphique sera genere automatiquement"
+            "For visualizations:\n"
+            "- Store the result in 'result'\n"
+            "- The chart will be generated automatically"
         ),
         'stats': (
-            "Pour les statistiques :\n"
-            "- Utilise df.describe() pour un resume complet\n"
-            "- df.corr() pour les correlations\n"
-            "- df['col'].value_counts() pour les distributions"
+            "For statistics:\n"
+            "- Use df.describe() for a complete summary\n"
+            "- df.corr() for correlations\n"
+            "- df['col'].value_counts() for distributions"
         ),
         'anomaly': (
-            "Pour detecter les anomalies :\n"
-            "- Utilise les quartiles : Q1, Q3, IQR = Q3-Q1\n"
-            "- Outliers : < Q1-1.5*IQR ou > Q3+1.5*IQR"
+            "To detect anomalies:\n"
+            "- Use quartiles: Q1, Q3, IQR = Q3-Q1\n"
+            "- Outliers: < Q1-1.5*IQR or > Q3+1.5*IQR"
         ),
         'filter': (
-            "Pour filtrer :\n"
+            "To filter:\n"
             "- df[df['col'] > value]\n"
             "- df.query('col > value')\n"
-            "- Conditions multiples : & (et), | (ou)"
+            "- Multiple conditions: & (and), | (or)"
         )
     }
     

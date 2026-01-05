@@ -1,5 +1,5 @@
 """
-Tests unitaires pour le module core/excel_utils.py
+Unit tests for core/excel_utils.py module
 """
 
 import os
@@ -17,7 +17,7 @@ from core import excel_utils
 
 @pytest.fixture
 def sample_dataframe():
-    """DataFrame de test simple."""
+    """Simple test DataFrame."""
     return pd.DataFrame({
         'Name': ['Alice', 'Bob', 'Charlie', 'Diana'],
         'Age': [25, 30, 35, 28],
@@ -28,7 +28,7 @@ def sample_dataframe():
 
 @pytest.fixture
 def sample_excel_file(sample_dataframe, tmp_path):
-    """Crée un fichier Excel temporaire avec une seule feuille."""
+    """Creates a temporary Excel file with a single sheet."""
     file_path = tmp_path / "test_single.xlsx"
     sample_dataframe.to_excel(file_path, index=False, sheet_name="Sheet1")
     return file_path
@@ -36,18 +36,18 @@ def sample_excel_file(sample_dataframe, tmp_path):
 
 @pytest.fixture
 def multi_sheet_excel_file(sample_dataframe, tmp_path):
-    """Crée un fichier Excel temporaire avec plusieurs feuilles."""
+    """Creates a temporary Excel file with multiple sheets."""
     file_path = tmp_path / "test_multi.xlsx"
     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-        sample_dataframe.to_excel(writer, sheet_name='Ventes', index=False)
-        sample_dataframe.head(2).to_excel(writer, sheet_name='Résumé', index=False)
-        sample_dataframe.tail(2).to_excel(writer, sheet_name='Détails', index=False)
+        sample_dataframe.to_excel(writer, sheet_name='Sales', index=False)
+        sample_dataframe.head(2).to_excel(writer, sheet_name='Summary', index=False)
+        sample_dataframe.tail(2).to_excel(writer, sheet_name='Details', index=False)
     return file_path
 
 
 @pytest.fixture
 def sample_csv_file(sample_dataframe, tmp_path):
-    """Crée un fichier CSV temporaire."""
+    """Creates a temporary CSV file."""
     file_path = tmp_path / "test.csv"
     sample_dataframe.to_csv(file_path, index=False)
     return file_path
@@ -58,21 +58,21 @@ def sample_csv_file(sample_dataframe, tmp_path):
 class TestDetectExcelSheets:
     
     def test_single_sheet(self, sample_excel_file):
-        """Test détection d'un fichier avec une seule feuille."""
+        """Test detection of a file with a single sheet."""
         sheets = excel_utils.detect_excel_sheets(sample_excel_file)
         assert len(sheets) == 1
         assert sheets[0] == "Sheet1"
     
     def test_multiple_sheets(self, multi_sheet_excel_file):
-        """Test détection d'un fichier avec plusieurs feuilles."""
+        """Test detection of a file with multiple sheets."""
         sheets = excel_utils.detect_excel_sheets(multi_sheet_excel_file)
         assert len(sheets) == 3
-        assert "Ventes" in sheets
-        assert "Résumé" in sheets
-        assert "Détails" in sheets
+        assert "Sales" in sheets
+        assert "Summary" in sheets
+        assert "Details" in sheets
     
     def test_with_buffer(self, sample_dataframe):
-        """Test détection depuis un buffer BytesIO."""
+        """Test detection from a BytesIO buffer."""
         buffer = BytesIO()
         sample_dataframe.to_excel(buffer, index=False)
         buffer.seek(0)
@@ -81,7 +81,7 @@ class TestDetectExcelSheets:
         assert len(sheets) == 1
     
     def test_invalid_file(self, tmp_path):
-        """Test avec un fichier invalide."""
+        """Test with an invalid file."""
         invalid_file = tmp_path / "invalid.xlsx"
         invalid_file.write_text("not an excel file")
         
@@ -94,29 +94,29 @@ class TestDetectExcelSheets:
 class TestReadExcelMultiSheets:
     
     def test_read_specific_sheet(self, multi_sheet_excel_file):
-        """Test lecture d'une feuille spécifique."""
-        df = excel_utils.read_excel_multi_sheets(multi_sheet_excel_file, sheet_name="Ventes")
+        """Test reading a specific sheet."""
+        df = excel_utils.read_excel_multi_sheets(multi_sheet_excel_file, sheet_name="Sales")
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 4
     
     def test_read_all_sheets(self, multi_sheet_excel_file):
-        """Test lecture de toutes les feuilles."""
+        """Test reading all sheets."""
         result = excel_utils.read_excel_multi_sheets(multi_sheet_excel_file, sheet_name=None)
         assert isinstance(result, dict)
         assert len(result) == 3
-        assert "Ventes" in result
-        assert "Résumé" in result
-        assert "Détails" in result
-        assert isinstance(result["Ventes"], pd.DataFrame)
+        assert "Sales" in result
+        assert "Summary" in result
+        assert "Details" in result
+        assert isinstance(result["Sales"], pd.DataFrame)
     
     def test_read_single_sheet_file(self, sample_excel_file):
-        """Test lecture d'un fichier mono-feuille."""
+        """Test reading a single-sheet file."""
         df = excel_utils.read_excel_multi_sheets(sample_excel_file, sheet_name="Sheet1")
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 4
     
     def test_with_buffer(self, sample_dataframe):
-        """Test lecture depuis un buffer."""
+        """Test reading from a buffer."""
         buffer = BytesIO()
         sample_dataframe.to_excel(buffer, index=False, sheet_name="Data")
         buffer.seek(0)
@@ -131,19 +131,19 @@ class TestReadExcelMultiSheets:
 class TestExportDataframeToExcel:
     
     def test_basic_export(self, sample_dataframe, tmp_path):
-        """Test export basique."""
+        """Test basic export."""
         output_path = tmp_path / "output.xlsx"
         result_path = excel_utils.export_dataframe_to_excel(sample_dataframe, output_path)
         
         assert Path(result_path).exists()
         
-        # Vérifier le contenu
+        # Verify content
         df_read = pd.read_excel(result_path)
         assert len(df_read) == len(sample_dataframe)
         assert list(df_read.columns) == list(sample_dataframe.columns)
     
     def test_export_with_custom_sheet_name(self, sample_dataframe, tmp_path):
-        """Test export avec nom de feuille personnalisé."""
+        """Test export with custom sheet name."""
         output_path = tmp_path / "output_custom.xlsx"
         excel_utils.export_dataframe_to_excel(
             sample_dataframe, 
@@ -155,7 +155,7 @@ class TestExportDataframeToExcel:
         assert "MyData" in sheets
     
     def test_export_with_formatting(self, sample_dataframe, tmp_path):
-        """Test export avec formatage automatique."""
+        """Test export with automatic formatting."""
         output_path = tmp_path / "output_formatted.xlsx"
         excel_utils.export_dataframe_to_excel(
             sample_dataframe, 
@@ -171,27 +171,27 @@ class TestExportDataframeToExcel:
 class TestExportDataframeToBuffer:
     
     def test_basic_buffer_export(self, sample_dataframe):
-        """Test export vers buffer."""
+        """Test export to buffer."""
         buffer = excel_utils.export_dataframe_to_buffer(sample_dataframe)
         
         assert isinstance(buffer, BytesIO)
-        assert buffer.getvalue()  # Non vide
+        assert buffer.getvalue()  # Not empty
         
-        # Vérifier qu'on peut relire
+        # Verify we can reread
         buffer.seek(0)
         df_read = pd.read_excel(buffer)
         assert len(df_read) == len(sample_dataframe)
     
     def test_buffer_with_custom_sheet(self, sample_dataframe):
-        """Test export buffer avec nom de feuille personnalisé."""
+        """Test buffer export with custom sheet name."""
         buffer = excel_utils.export_dataframe_to_buffer(
             sample_dataframe, 
-            sheet_name="Résultats"
+            sheet_name="Results"
         )
         
         buffer.seek(0)
         sheets = excel_utils.detect_excel_sheets(buffer)
-        assert "Résultats" in sheets
+        assert "Results" in sheets
 
 
 # ============ TESTS CREATE_PIVOT_TABLE ============
@@ -199,7 +199,7 @@ class TestExportDataframeToBuffer:
 class TestCreatePivotTable:
     
     def test_simple_pivot(self, sample_dataframe):
-        """Test création d'un pivot table simple."""
+        """Test creation of a simple pivot table."""
         pivot = excel_utils.create_pivot_table(
             sample_dataframe,
             values='Sales',
@@ -209,10 +209,10 @@ class TestCreatePivotTable:
         
         assert isinstance(pivot, pd.DataFrame)
         assert 'City' in pivot.columns
-        assert len(pivot) == 4  # 4 villes uniques
+        assert len(pivot) == 4  # 4 unique cities
     
     def test_pivot_with_columns(self):
-        """Test pivot table avec colonnes."""
+        """Test pivot table with columns."""
         df = pd.DataFrame({
             'Region': ['North', 'North', 'South', 'South'],
             'Product': ['A', 'B', 'A', 'B'],
@@ -230,7 +230,7 @@ class TestCreatePivotTable:
         assert isinstance(pivot, pd.DataFrame)
     
     def test_pivot_invalid_column(self, sample_dataframe):
-        """Test pivot avec colonne inexistante."""
+        """Test pivot with non-existent column."""
         with pytest.raises(ValueError):
             excel_utils.create_pivot_table(
                 sample_dataframe,
@@ -245,8 +245,8 @@ class TestCreatePivotTable:
 class TestMergeExcelFiles:
     
     def test_concat_merge(self, sample_excel_file, tmp_path):
-        """Test fusion par concaténation."""
-        # Créer un deuxième fichier
+        """Test merge by concatenation."""
+        # Create a second file
         df2 = pd.DataFrame({
             'Name': ['Eve', 'Frank'],
             'Age': [22, 45],
@@ -265,7 +265,7 @@ class TestMergeExcelFiles:
         assert len(merged) == 6  # 4 + 2
     
     def test_merge_on_key(self, tmp_path):
-        """Test fusion sur colonne commune."""
+        """Test merge on common column."""
         df1 = pd.DataFrame({'ID': [1, 2, 3], 'Name': ['A', 'B', 'C']})
         df2 = pd.DataFrame({'ID': [1, 2, 3], 'Value': [100, 200, 300]})
         
@@ -286,7 +286,7 @@ class TestMergeExcelFiles:
         assert len(merged) == 3
     
     def test_merge_csv_and_excel(self, sample_csv_file, sample_excel_file):
-        """Test fusion de fichiers mixtes CSV et Excel."""
+        """Test merge of mixed CSV and Excel files."""
         merged = excel_utils.merge_excel_files(
             [sample_csv_file, sample_excel_file],
             merge_type='concat'
@@ -296,7 +296,7 @@ class TestMergeExcelFiles:
         assert len(merged) == 8  # 4 + 4
     
     def test_merge_empty_list(self):
-        """Test fusion avec liste vide."""
+        """Test merge with empty list."""
         with pytest.raises(ValueError):
             excel_utils.merge_excel_files([])
 
@@ -306,7 +306,7 @@ class TestMergeExcelFiles:
 class TestValidateExcelFile:
     
     def test_valid_file(self, sample_excel_file):
-        """Test validation d'un fichier valide."""
+        """Test validation of a valid file."""
         result = excel_utils.validate_excel_file(sample_excel_file)
         
         assert result['valid'] is True
@@ -315,7 +315,7 @@ class TestValidateExcelFile:
         assert result['error'] is None
     
     def test_multi_sheet_validation(self, multi_sheet_excel_file):
-        """Test validation d'un fichier multi-feuilles."""
+        """Test validation of a multi-sheet file."""
         result = excel_utils.validate_excel_file(multi_sheet_excel_file)
         
         assert result['valid'] is True
@@ -323,7 +323,7 @@ class TestValidateExcelFile:
         assert result['total_rows'] == 8  # 4 + 2 + 2
     
     def test_invalid_file(self, tmp_path):
-        """Test validation d'un fichier invalide."""
+        """Test validation of an invalid file."""
         invalid_file = tmp_path / "invalid.xlsx"
         invalid_file.write_text("not excel")
         
@@ -338,41 +338,41 @@ class TestValidateExcelFile:
 class TestShouldExportToExcel:
     
     def test_export_keyword_in_question(self, sample_dataframe):
-        """Test détection de mot-clé export dans la question."""
+        """Test detection of export keyword in question."""
         assert excel_utils.should_export_to_excel(
-            "Exporte les résultats en Excel",
+            "Export results to Excel",
             "",
             sample_dataframe
         ) is True
     
     def test_download_keyword(self, sample_dataframe):
-        """Test détection de mot-clé télécharger."""
+        """Test detection of download keyword."""
         assert excel_utils.should_export_to_excel(
-            "Télécharger les données",
+            "Download the data",
             "",
             sample_dataframe
         ) is True
     
     def test_to_excel_in_code(self, sample_dataframe):
-        """Test détection de to_excel dans le code."""
+        """Test detection of to_excel in code."""
         assert excel_utils.should_export_to_excel(
-            "Affiche les résultats",
+            "Display results",
             "df.to_excel('output.xlsx')",
             sample_dataframe
         ) is True
     
     def test_no_export_needed(self, sample_dataframe):
-        """Test sans intention d'export."""
+        """Test without export intention."""
         assert excel_utils.should_export_to_excel(
-            "Calcule la moyenne",
+            "Calculate the mean",
             "result = df['Sales'].mean()",
             sample_dataframe
         ) is False
     
     def test_non_dataframe_result(self):
-        """Test avec résultat non-DataFrame."""
+        """Test with non-DataFrame result."""
         assert excel_utils.should_export_to_excel(
-            "Exporte en Excel",
+            "Export to Excel",
             "",
             "string result"
         ) is False
@@ -383,7 +383,7 @@ class TestShouldExportToExcel:
 class TestEdgeCases:
     
     def test_empty_dataframe_export(self, tmp_path):
-        """Test export d'un DataFrame vide."""
+        """Test export of an empty DataFrame."""
         empty_df = pd.DataFrame()
         output_path = tmp_path / "empty.xlsx"
         
@@ -391,21 +391,21 @@ class TestEdgeCases:
         assert Path(result_path).exists()
     
     def test_unicode_content(self, tmp_path):
-        """Test avec contenu Unicode."""
+        """Test with Unicode content."""
         df = pd.DataFrame({
-            'Nom': ['Élise', 'François', '日本語'],
-            'Ville': ['Zürich', 'München', '東京']
+            'Name': ['Élise', 'François', '日本語'],
+            'City': ['Zürich', 'München', '東京']
         })
         
         output_path = tmp_path / "unicode.xlsx"
         excel_utils.export_dataframe_to_excel(df, output_path)
         
         df_read = pd.read_excel(output_path)
-        assert df_read['Nom'].iloc[0] == 'Élise'
-        assert df_read['Ville'].iloc[2] == '東京'
+        assert df_read['Name'].iloc[0] == 'Élise'
+        assert df_read['City'].iloc[2] == '東京'
     
     def test_large_dataframe(self, tmp_path):
-        """Test avec un grand DataFrame."""
+        """Test with a large DataFrame."""
         large_df = pd.DataFrame({
             'A': range(10000),
             'B': ['value'] * 10000
