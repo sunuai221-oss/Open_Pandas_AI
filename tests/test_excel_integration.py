@@ -1,6 +1,6 @@
 """
-Tests d'intégration pour les fonctionnalités Excel dans Open Pandas-AI.
-Teste le flux complet : upload → question → export.
+Integration tests for Excel features in Open Pandas-AI.
+Tests the complete flow: upload → question → export.
 """
 
 import os
@@ -21,7 +21,7 @@ from core.prompt_builder import build_prompt, detect_excel_intention, build_exce
 
 @pytest.fixture
 def sample_sales_data():
-    """Données de ventes pour tests d'intégration."""
+    """Sales data for integration tests."""
     return pd.DataFrame({
         'Region': ['North', 'North', 'South', 'South', 'East', 'East', 'West', 'West'],
         'Product': ['Widget', 'Gadget', 'Widget', 'Gadget', 'Widget', 'Gadget', 'Widget', 'Gadget'],
@@ -33,7 +33,7 @@ def sample_sales_data():
 
 @pytest.fixture
 def multi_sheet_workbook(sample_sales_data, tmp_path):
-    """Fichier Excel avec plusieurs feuilles."""
+    """Excel file with multiple sheets."""
     file_path = tmp_path / "sales_report.xlsx"
     with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
         sample_sales_data.to_excel(writer, sheet_name='Sales', index=False)
@@ -43,74 +43,74 @@ def multi_sheet_workbook(sample_sales_data, tmp_path):
     return file_path
 
 
-# ============ TESTS FLUX COMPLET ============
+# ============ COMPLETE FLOW TESTS ============
 
 class TestIntegrationFlow:
-    """Tests du flux complet upload → question → export."""
+    """Tests for complete flow: upload → question → export."""
     
     def test_full_flow_with_single_sheet(self, sample_sales_data, tmp_path):
-        """Test flux complet avec fichier mono-feuille."""
-        # 1. Créer fichier Excel
+        """Test complete flow with single-sheet file."""
+        # 1. Create Excel file
         input_file = tmp_path / "input.xlsx"
         sample_sales_data.to_excel(input_file, index=False)
         
-        # 2. Détecter les feuilles
+        # 2. Detect sheets
         sheets = excel_utils.detect_excel_sheets(input_file)
         assert len(sheets) == 1
         
-        # 3. Lire les données
+        # 3. Read data
         df = excel_utils.read_excel_multi_sheets(input_file, sheet_name=sheets[0])
         assert len(df) == 8
         
-        # 4. Construire un prompt
-        question = "Calcule le total des ventes par région"
+        # 4. Build prompt
+        question = "Calculate total sales by region"
         prompt = build_prompt(df, question)
         assert "Region" in prompt
         assert "Sales" in prompt
         
-        # 5. Simuler résultat (ce que le LLM aurait produit)
+        # 5. Simulate result (what LLM would have produced)
         result = df.groupby('Region')['Sales'].sum().reset_index()
         
-        # 6. Exporter en Excel
+        # 6. Export to Excel
         output_file = tmp_path / "output.xlsx"
         excel_utils.export_dataframe_to_excel(result, output_file)
         assert output_file.exists()
         
-        # 7. Vérifier le contenu exporté
+        # 7. Verify exported content
         exported = pd.read_excel(output_file)
-        assert len(exported) == 4  # 4 régions
+        assert len(exported) == 4  # 4 regions
         assert 'Sales' in exported.columns
     
     def test_full_flow_with_multi_sheets(self, multi_sheet_workbook):
-        """Test flux complet avec fichier multi-feuilles."""
-        # 1. Détecter les feuilles
+        """Test complete flow with multi-sheet file."""
+        # 1. Detect sheets
         sheets = excel_utils.detect_excel_sheets(multi_sheet_workbook)
         assert len(sheets) == 2
         assert 'Sales' in sheets
         assert 'Summary' in sheets
         
-        # 2. Lire toutes les feuilles
+        # 2. Read all sheets
         all_sheets = excel_utils.read_excel_multi_sheets(multi_sheet_workbook, sheet_name=None)
         assert len(all_sheets) == 2
         
-        # 3. Construire prompt avec info multi-sheets
+        # 3. Build prompt with multi-sheet info
         df = all_sheets['Sales']
-        question = "Analyse les ventes par produit"
+        question = "Analyze sales by product"
         prompt = build_prompt(df, question, available_sheets=list(all_sheets.keys()))
-        assert "Sales" in prompt or "feuilles" in prompt.lower()
+        assert "Sales" in prompt or "sheets" in prompt.lower()
     
     def test_pivot_table_flow(self, sample_sales_data, tmp_path):
-        """Test flux avec création de pivot table."""
-        # 1. Détecter intention pivot
-        question = "Crée un tableau croisé dynamique des ventes par région et produit"
+        """Test flow with pivot table creation."""
+        # 1. Detect pivot intention
+        question = "Create a pivot table of sales by region and product"
         intentions = detect_excel_intention(question)
         assert intentions['pivot_table'] is True
         
-        # 2. Construire les instructions
+        # 2. Build instructions
         instructions = build_excel_instructions(intentions)
         assert "pivot" in instructions.lower()
         
-        # 3. Créer le pivot table
+        # 3. Create pivot table
         pivot = excel_utils.create_pivot_table(
             sample_sales_data,
             values='Sales',
@@ -120,16 +120,16 @@ class TestIntegrationFlow:
         )
         
         assert isinstance(pivot, pd.DataFrame)
-        assert len(pivot) == 4  # 4 régions
+        assert len(pivot) == 4  # 4 regions
         
-        # 4. Exporter
+        # 4. Export
         output_file = tmp_path / "pivot.xlsx"
         excel_utils.export_dataframe_to_excel(pivot, output_file)
         assert output_file.exists()
     
     def test_merge_files_flow(self, tmp_path):
-        """Test flux avec fusion de fichiers."""
-        # Créer deux fichiers à fusionner
+        """Test flow with file merging."""
+        # Create two files to merge
         df1 = pd.DataFrame({
             'ID': [1, 2, 3],
             'Name': ['Alice', 'Bob', 'Charlie'],
@@ -145,41 +145,41 @@ class TestIntegrationFlow:
         df1.to_excel(file1, index=False)
         df2.to_excel(file2, index=False)
         
-        # Détecter intention merge
-        question = "Fusionner les données Q1 et Q2"
+        # Detect merge intention
+        question = "Merge Q1 and Q2 data"
         intentions = detect_excel_intention(question)
         assert intentions['merge'] is True
         
-        # Fusionner
+        # Merge
         merged = excel_utils.merge_excel_files([file1, file2], merge_type='merge', merge_key='ID')
         
         assert len(merged) == 3
         assert 'Score_Q1' in merged.columns
         assert 'Score_Q2' in merged.columns
         
-        # Exporter le résultat
+        # Export result
         output_file = tmp_path / "merged.xlsx"
         excel_utils.export_dataframe_to_excel(merged, output_file)
         assert output_file.exists()
 
 
-# ============ TESTS FORMATAGE INTÉGRÉ ============
+# ============ FORMATTING INTEGRATION TESTS ============
 
 class TestFormattingIntegration:
-    """Tests d'intégration du formatage Excel."""
+    """Excel formatting integration tests."""
     
     def test_export_with_professional_formatting(self, sample_sales_data, tmp_path):
-        """Test export avec formatage professionnel."""
+        """Test export with professional formatting."""
         output_file = tmp_path / "formatted.xlsx"
         
-        # Export avec formatage auto
+        # Export with auto formatting
         excel_utils.export_dataframe_to_excel(
             sample_sales_data,
             output_file,
             auto_format=True
         )
         
-        # Appliquer formatage avancé
+        # Apply advanced formatting
         excel_formatter.format_excel_output(output_file, {
             'auto_width': True,
             'header_style': {'bg_color': 'header_bg_dark', 'font_color': 'white'},
@@ -189,26 +189,26 @@ class TestFormattingIntegration:
         
         assert output_file.exists()
         
-        # Vérifier que le fichier peut être relu
+        # Verify file can be reread
         df_read = pd.read_excel(output_file)
         assert len(df_read) == len(sample_sales_data)
     
     def test_buffer_formatting_for_download(self, sample_sales_data):
-        """Test formatage buffer pour téléchargement Streamlit."""
-        # Export vers buffer
+        """Test buffer formatting for Streamlit download."""
+        # Export to buffer
         buffer = excel_utils.export_dataframe_to_buffer(sample_sales_data, auto_format=True)
         
-        # Vérifier que le buffer est valide
+        # Verify buffer is valid
         assert isinstance(buffer, BytesIO)
         assert len(buffer.getvalue()) > 0
         
-        # Vérifier qu'on peut le relire
+        # Verify we can reread it
         buffer.seek(0)
         df_read = pd.read_excel(buffer)
         assert len(df_read) == len(sample_sales_data)
     
     def test_conditional_formatting(self, sample_sales_data, tmp_path):
-        """Test formatage conditionnel."""
+        """Test conditional formatting."""
         output_file = tmp_path / "conditional.xlsx"
         sample_sales_data.to_excel(output_file, index=False, engine='openpyxl')
         
@@ -216,48 +216,48 @@ class TestFormattingIntegration:
         wb = load_workbook(output_file)
         ws = wb.active
         
-        # Appliquer formatage conditionnel sur colonne Sales (D)
+        # Apply conditional formatting on Sales column (D)
         excel_formatter.apply_conditional_formatting(
             ws, 'D', 'data_bar', start_row=2
         )
         
-        # Appliquer échelle de couleurs sur Profit (E)
+        # Apply color scale on Profit column (E)
         excel_formatter.apply_conditional_formatting(
             ws, 'E', 'color_scale', start_row=2
         )
         
         wb.save(output_file)
         
-        # Vérifier que le fichier est toujours valide
+        # Verify file is still valid
         df_read = pd.read_excel(output_file)
         assert len(df_read) == len(sample_sales_data)
 
 
-# ============ TESTS PROMPT BUILDER ============
+# ============ PROMPT BUILDER TESTS ============
 
 class TestPromptBuilderIntegration:
-    """Tests d'intégration du prompt builder avec Excel."""
+    """Prompt builder integration tests with Excel."""
     
     def test_prompt_with_pivot_detection(self, sample_sales_data):
-        """Test prompt avec détection de pivot table."""
-        question = "Crée un pivot table des ventes par région"
+        """Test prompt with pivot table detection."""
+        question = "Create a pivot table of sales by region"
         prompt = build_prompt(sample_sales_data, question)
         
-        # Le prompt doit contenir des instructions pivot
+        # Prompt must contain pivot instructions
         assert "pivot" in prompt.lower()
-        assert "aggfunc" in prompt.lower() or "agrégation" in prompt.lower()
+        assert "aggfunc" in prompt.lower() or "aggregation" in prompt.lower()
     
     def test_prompt_with_export_detection(self, sample_sales_data):
-        """Test prompt avec détection d'export."""
-        question = "Exporte les résultats en Excel"
+        """Test prompt with export detection."""
+        question = "Export results to Excel"
         prompt = build_prompt(sample_sales_data, question)
         
-        # Le prompt doit mentionner que l'export sera automatique
+        # Prompt must mention that export will be automatic
         assert "result" in prompt.lower()
     
     def test_prompt_with_groupby_detection(self, sample_sales_data):
-        """Test prompt avec détection de groupby."""
-        question = "Groupe les données par région et calcule la moyenne"
+        """Test prompt with groupby detection."""
+        question = "Group data by region and calculate the mean"
         intentions = detect_excel_intention(question)
         
         assert intentions['groupby'] is True
@@ -266,27 +266,27 @@ class TestPromptBuilderIntegration:
         assert "groupby" in instructions.lower() or "group" in instructions.lower()
     
     def test_prompt_with_multi_sheets_context(self, sample_sales_data):
-        """Test prompt avec contexte multi-feuilles."""
+        """Test prompt with multi-sheet context."""
         available_sheets = ['Sales', 'Summary', 'Details']
-        question = "Analyse les données de la feuille Summary"
+        question = "Analyze data from the Summary sheet"
         
         prompt = build_prompt(sample_sales_data, question, available_sheets=available_sheets)
         
-        # Le prompt devrait mentionner les feuilles disponibles
-        assert "Sales" in prompt or "feuilles" in prompt.lower()
+        # Prompt should mention available sheets
+        assert "Sales" in prompt or "sheets" in prompt.lower()
 
 
-# ============ TESTS SÉCURITÉ ============
+# ============ SECURITY TESTS ============
 
 class TestSecurityIntegration:
-    """Tests de sécurité pour les opérations Excel."""
+    """Security tests for Excel operations."""
     
     def test_to_excel_detection(self, sample_sales_data):
-        """Test détection de to_excel dans le code."""
+        """Test detection of to_excel in code."""
         code_with_to_excel = "df.to_excel('output.xlsx', index=False)"
         
         should_export = excel_utils.should_export_to_excel(
-            "Affiche les données",
+            "Display data",
             code_with_to_excel,
             sample_sales_data
         )
@@ -294,15 +294,15 @@ class TestSecurityIntegration:
         assert should_export is True
     
     def test_path_validation_in_export(self, sample_sales_data, tmp_path):
-        """Test que l'export est limité aux chemins valides."""
-        # Export vers chemin valide (dans tmp_path)
+        """Test that export is limited to valid paths."""
+        # Export to valid path (in tmp_path)
         valid_path = tmp_path / "valid.xlsx"
         result = excel_utils.export_dataframe_to_excel(sample_sales_data, valid_path)
         assert Path(result).exists()
     
     def test_file_size_limit(self, tmp_path):
-        """Test comportement avec fichiers volumineux."""
-        # Créer un DataFrame assez gros
+        """Test behavior with large files."""
+        # Create a fairly large DataFrame
         large_df = pd.DataFrame({
             'A': range(50000),
             'B': ['data'] * 50000
@@ -311,19 +311,19 @@ class TestSecurityIntegration:
         output_file = tmp_path / "large.xlsx"
         excel_utils.export_dataframe_to_excel(large_df, output_file)
         
-        # Vérifier que le fichier existe et peut être relu
+        # Verify file exists and can be reread
         assert output_file.exists()
         df_read = pd.read_excel(output_file)
         assert len(df_read) == 50000
 
 
-# ============ TESTS EDGE CASES ============
+# ============ EDGE CASES TESTS ============
 
 class TestEdgeCasesIntegration:
-    """Tests de cas limites."""
+    """Edge cases tests."""
     
     def test_empty_dataframe_flow(self, tmp_path):
-        """Test flux complet avec DataFrame vide."""
+        """Test complete flow with empty DataFrame."""
         empty_df = pd.DataFrame()
         
         # Export
@@ -336,22 +336,22 @@ class TestEdgeCasesIntegration:
         assert isinstance(buffer, BytesIO)
     
     def test_special_characters_in_data(self, tmp_path):
-        """Test avec caractères spéciaux."""
+        """Test with special characters."""
         df = pd.DataFrame({
-            'Nom': ['Élise', 'François', '日本語', 'Müller'],
+            'Name': ['Élise', 'François', '日本語', 'Müller'],
             'Description': ['Café & Thé', '<script>alert()</script>', 'Test"quotes"', "It's OK"]
         })
         
         output_file = tmp_path / "special.xlsx"
         excel_utils.export_dataframe_to_excel(df, output_file)
         
-        # Vérifier que le fichier peut être relu
+        # Verify file can be reread
         df_read = pd.read_excel(output_file)
-        assert df_read['Nom'].iloc[0] == 'Élise'
+        assert df_read['Name'].iloc[0] == 'Élise'
         assert df_read['Description'].iloc[1] == '<script>alert()</script>'
     
     def test_numeric_column_names(self, tmp_path):
-        """Test avec noms de colonnes numériques."""
+        """Test with numeric column names."""
         df = pd.DataFrame({
             2020: [100, 200, 300],
             2021: [150, 250, 350],
@@ -365,7 +365,7 @@ class TestEdgeCasesIntegration:
         assert len(df_read) == 3
     
     def test_mixed_types_in_column(self, tmp_path):
-        """Test avec types mixtes dans une colonne."""
+        """Test with mixed types in a column."""
         df = pd.DataFrame({
             'Mixed': [1, 'two', 3.0, None, True]
         })
@@ -377,16 +377,16 @@ class TestEdgeCasesIntegration:
         assert len(df_read) == 5
 
 
-# ============ TESTS PERFORMANCE ============
+# ============ PERFORMANCE TESTS ============
 
 class TestPerformanceIntegration:
-    """Tests de performance basiques."""
+    """Basic performance tests."""
     
     def test_large_multi_sheet_file(self, tmp_path):
-        """Test lecture d'un fichier multi-feuilles volumineux."""
+        """Test reading a large multi-sheet file."""
         file_path = tmp_path / "large_multi.xlsx"
         
-        # Créer fichier avec plusieurs grandes feuilles
+        # Create file with multiple large sheets
         with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
             for i in range(5):
                 df = pd.DataFrame({
@@ -395,7 +395,7 @@ class TestPerformanceIntegration:
                 })
                 df.to_excel(writer, sheet_name=f'Sheet_{i}', index=False)
         
-        # Lire toutes les feuilles
+        # Read all sheets
         result = excel_utils.read_excel_multi_sheets(file_path, sheet_name=None)
         
         assert len(result) == 5
@@ -403,7 +403,7 @@ class TestPerformanceIntegration:
             assert len(df) == 1000
     
     def test_validation_performance(self, tmp_path):
-        """Test validation d'un fichier volumineux."""
+        """Test validation of a large file."""
         file_path = tmp_path / "large_validation.xlsx"
         
         large_df = pd.DataFrame({
