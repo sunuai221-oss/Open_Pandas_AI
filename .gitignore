@@ -1,0 +1,41 @@
+﻿# Environment secrets
+.env
+core/.env
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Sandbox artifacts
+result.png
+*.pkl
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+open_pandas_ai.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak

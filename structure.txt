@@ -1,0 +1,27 @@
+Open_Pandas_AI/
+│
+├── app.py                     # Point d'entrée principal (Streamlit, orchestration pipeline IA)
+│
+├── core/                      # Intelligence métier (tous les agents, IA, outils analytiques)
+│   ├── prompt_builder.py      # Génération du prompt LLM contextuel (analyse, consulting…)
+│   ├── llm.py                 # Abstraction des appels LLM (Codestral, OpenAI…)
+│   ├── executor.py            # Exécution sécurisée du code généré par l'IA
+│   ├── formatter.py           # Mise en forme des résultats
+│   ├── code_security.py       # Analyse AST/sécurité du code IA
+│   ├── error_handler.py       # Gestion et correction automatique des erreurs IA
+│   ├── visualization.py       # Génération + exécution du code graphique IA
+│   ├── consulting.py          # Agent IA consulting (analyse, recommandations, conseils…)
+│   └── memory.py              # Gestion de la mémoire à court terme (session/chat RAM)
+│
+├── db/                        # Mémoire persistante, historique, schéma long-terme (PostgreSQL)
+│   ├── models.py              # Modèles SQLAlchemy (tables, relations, ORM)
+│   ├── session.py             # Connexion et gestion de la session SQLAlchemy
+│   ├── queries.py             # Fonctions/filtres pour récupérer historiques, stats, contexte enrichi (RAG)
+│   ├── init_db.py             # Script d'initialisation/création des tables
+│   └── migrations/            # (optionnel) fichiers de migration DB, si tu utilises Alembic, etc.
+│
+├── datasets/                  # (optionnel) Échantillons de jeux de données pour tests/démo/benchmarks
+│   └── ...
+│
+├── requirements.txt           # Dépendances Python du projet
+└── README.md                  # Documentation d’installation, usage, structure
