@@ -1,5 +1,5 @@
 """
-Composant d'affichage enrichi des résultats.
+Enhanced result display component.
 """
 
 import streamlit as st
@@ -11,26 +11,26 @@ from core.session_manager import get_session_manager
 
 def render_result(
     result: Any,
-    title: str = "Résultat",
+    title: str = "Result",
     show_stats: bool = True,
     show_actions: bool = True,
     key_prefix: str = "result"
 ):
     """
-    Affiche un résultat de manière enrichie.
+    Displays a result in an enhanced way.
     
     Args:
-        result: Résultat à afficher (DataFrame, scalar, str, etc.)
-        title: Titre de la section
-        show_stats: Afficher les statistiques rapides
-        show_actions: Afficher les actions (export, etc.)
-        key_prefix: Préfixe pour les clés Streamlit
+        result: Result to display (DataFrame, scalar, str, etc.)
+        title: Section title
+        show_stats: Show quick statistics
+        show_actions: Show actions (export, etc.)
+        key_prefix: Prefix for Streamlit keys
     """
     
     st.markdown(f"### 📊 {title}")
     
     if result is None:
-        st.info("Aucun résultat à afficher")
+        st.info("No result to display")
         return
     
     if isinstance(result, pd.DataFrame):
@@ -53,31 +53,31 @@ def _render_dataframe_result(
     show_actions: bool,
     key_prefix: str
 ):
-    """Affiche un résultat DataFrame."""
+    """Displays a DataFrame result."""
     
     if df.empty:
-        st.warning("Le DataFrame est vide")
+        st.warning("DataFrame is empty")
         return
     
-    # Onglets: Tableau | Stats | Actions
-    tabs = ["📋 Tableau"]
+    # Tabs: Table | Stats | Actions
+    tabs = ["📋 Table"]
     if show_stats:
-        tabs.append("📈 Statistiques")
+        tabs.append("📈 Statistics")
     
     tab_objects = st.tabs(tabs)
     
-    # Onglet Tableau
+    # Table tab
     with tab_objects[0]:
-        # Options d'affichage
+        # Display options
         col1, col2 = st.columns([3, 1])
         with col2:
             session = get_session_manager()
-            row_options = [10, 25, 50, 100, 500, "Toutes"]
+            row_options = [10, 25, 50, 100, 500, "All"]
             current_max_rows = session.display_max_rows
             if current_max_rows not in row_options:
                 current_max_rows = 25
             max_rows = st.selectbox(
-                "Lignes",
+                "Rows",
                 options=row_options,
                 index=row_options.index(current_max_rows),
                 key=f"{key_prefix}_max_rows"
@@ -85,14 +85,14 @@ def _render_dataframe_result(
             if max_rows != session.display_max_rows:
                 session.set_display_max_rows(max_rows)
         
-        # Affichage du DataFrame
-        display_df = df if max_rows == "Toutes" else df.head(int(max_rows))
+        # DataFrame display
+        display_df = df if max_rows == "All" else df.head(int(max_rows))
         st.dataframe(display_df, use_container_width=True, height=400)
         
         # Info
-        st.caption(f"Affichage: {len(display_df)} / {len(df)} lignes • {len(df.columns)} colonnes")
+        st.caption(f"Display: {len(display_df)} / {len(df)} rows • {len(df.columns)} columns")
     
-    # Onglet Stats
+    # Stats tab
     if show_stats and len(tab_objects) > 1:
         with tab_objects[1]:
             _render_quick_stats(df)
@@ -104,42 +104,42 @@ def _render_dataframe_result(
 
 
 def _render_quick_stats(df: pd.DataFrame):
-    """Affiche les statistiques rapides."""
+    """Displays quick statistics."""
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### Aperçu numérique")
+        st.markdown("#### Numeric Overview")
         numeric_df = df.select_dtypes(include=['number'])
         if not numeric_df.empty:
             st.dataframe(numeric_df.describe(), use_container_width=True)
         else:
-            st.info("Pas de colonnes numériques")
+            st.info("No numeric columns")
     
     with col2:
-        st.markdown("#### Aperçu catégoriel")
+        st.markdown("#### Categorical Overview")
         cat_df = df.select_dtypes(include=['object', 'category'])
         if not cat_df.empty:
-            for col in cat_df.columns[:3]:  # Limiter à 3 colonnes
-                st.markdown(f"**{col}**: {df[col].nunique()} valeurs uniques")
+            for col in cat_df.columns[:3]:  # Limit to 3 columns
+                st.markdown(f"**{col}**: {df[col].nunique()} unique values")
                 st.caption(f"Top: {df[col].value_counts().head(3).to_dict()}")
         else:
-            st.info("Pas de colonnes catégorielles")
+            st.info("No categorical columns")
 
 
 def _render_result_actions(df: pd.DataFrame, key_prefix: str):
-    """Affiche les actions disponibles pour le résultat."""
+    """Displays available actions for the result."""
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         # Export Excel
         from core import excel_utils
-        buffer = excel_utils.export_dataframe_to_buffer(df, sheet_name="Résultat")
+        buffer = excel_utils.export_dataframe_to_buffer(df, sheet_name="Result")
         st.download_button(
             "📥 Excel",
             data=buffer,
-            file_name=f"resultat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            file_name=f"result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key=f"{key_prefix}_excel",
             use_container_width=True
@@ -151,32 +151,32 @@ def _render_result_actions(df: pd.DataFrame, key_prefix: str):
         st.download_button(
             "📄 CSV",
             data=csv,
-            file_name=f"resultat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            file_name=f"result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             key=f"{key_prefix}_csv",
             use_container_width=True
         )
     
     with col3:
-        if st.button("📈 Visualiser", key=f"{key_prefix}_viz", use_container_width=True):
-            st.session_state['suggested_question'] = "Génère un graphique de ce résultat"
+        if st.button("📈 Visualize", key=f"{key_prefix}_viz", use_container_width=True):
+            st.session_state['suggested_question'] = "Generate a chart of this result"
             st.rerun()
     
     with col4:
-        if st.button("🔍 Approfondir", key=f"{key_prefix}_deep", use_container_width=True):
-            st.session_state['suggested_question'] = "Analyse plus en détail ce résultat"
+        if st.button("🔍 Deepen", key=f"{key_prefix}_deep", use_container_width=True):
+            st.session_state['suggested_question'] = "Analyze this result in more detail"
             st.rerun()
 
 
 def _render_numeric_result(value: float):
-    """Affiche un résultat numérique."""
+    """Displays a numeric result."""
     
     if isinstance(value, float):
         formatted = f"{value:,.2f}"
     else:
         formatted = f"{value:,}"
     
-    st.metric("Valeur", formatted)
+    st.metric("Value", formatted)
 
 
 def _render_text_result(text: str):

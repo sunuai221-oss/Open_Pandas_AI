@@ -1,5 +1,5 @@
 """
-Panneau d'export multi-format pour Open Pandas-AI.
+Multi-format export panel for Open Pandas-AI.
 """
 
 import streamlit as st
@@ -14,62 +14,62 @@ from core import excel_formatter
 
 def render_export_panel(
     df: pd.DataFrame,
-    title: str = "📥 Export des données",
+    title: str = "📥 Export Data",
     show_options: bool = True,
     key_prefix: str = "export"
 ):
     """
-    Affiche le panneau d'export complet.
+    Displays the complete export panel.
     
     Args:
-        df: DataFrame à exporter
-        title: Titre du panneau
-        show_options: Afficher les options avancées
-        key_prefix: Préfixe pour les clés Streamlit
+        df: DataFrame to export
+        title: Panel title
+        show_options: Show advanced options
+        key_prefix: Prefix for Streamlit keys
     """
     
     if df is None or df.empty:
-        st.info("Aucune donnée à exporter")
+        st.info("No data to export")
         return
     
     st.markdown(f"### {title}")
     
-    # Info sur les données
-    st.caption(f"📊 {len(df):,} lignes × {len(df.columns)} colonnes")
+    # Data info
+    st.caption(f"📊 {len(df):,} rows × {len(df.columns)} columns")
     
-    # Options d'export
+    # Export options
     if show_options:
-        with st.expander("⚙️ Options d'export", expanded=False):
+        with st.expander("⚙️ Export Options", expanded=False):
             col1, col2 = st.columns(2)
             
             with col1:
                 sheet_name = st.text_input(
-                    "Nom de la feuille",
-                    value="Données",
+                    "Sheet Name",
+                    value="Data",
                     key=f"{key_prefix}_sheet_name"
                 )
                 
                 include_index = st.checkbox(
-                    "Inclure l'index",
+                    "Include Index",
                     value=False,
                     key=f"{key_prefix}_include_index"
                 )
             
             with col2:
                 format_style = st.selectbox(
-                    "Style de formatage",
+                    "Formatting Style",
                     options=['auto', 'professional', 'modern', 'minimal', 'none'],
                     index=0,
                     key=f"{key_prefix}_format_style"
                 )
     else:
-        sheet_name = "Données"
+        sheet_name = "Data"
         include_index = False
         format_style = 'auto'
     
     st.markdown("---")
     
-    # Boutons d'export
+    # Export buttons
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -89,7 +89,7 @@ def _render_excel_export(
     format_style: str,
     key_prefix: str
 ):
-    """Affiche le bouton d'export Excel."""
+    """Displays Excel export button."""
     
     st.markdown("#### 📗 Excel")
     
@@ -99,7 +99,7 @@ def _render_excel_export(
     # Export avec pandas
     df.to_excel(buffer, sheet_name=sheet_name, index=include_index, engine='openpyxl')
     
-    # Appliquer le formatage si demandé
+    # Apply formatting if requested
     if format_style != 'none':
         buffer.seek(0)
         from openpyxl import load_workbook
@@ -118,7 +118,7 @@ def _render_excel_export(
     buffer.seek(0)
     
     st.download_button(
-        "📥 Télécharger .xlsx",
+        "📥 Download .xlsx",
         data=buffer,
         file_name=f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -126,18 +126,18 @@ def _render_excel_export(
         use_container_width=True
     )
     
-    st.caption("Formaté avec styles")
+    st.caption("Formatted with styles")
 
 
 def _render_csv_export(df: pd.DataFrame, include_index: bool, key_prefix: str):
-    """Affiche le bouton d'export CSV."""
+    """Displays CSV export button."""
     
     st.markdown("#### 📄 CSV")
     
     csv = df.to_csv(index=include_index)
     
     st.download_button(
-        "📥 Télécharger .csv",
+        "📥 Download .csv",
         data=csv,
         file_name=f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv",
@@ -145,18 +145,18 @@ def _render_csv_export(df: pd.DataFrame, include_index: bool, key_prefix: str):
         use_container_width=True
     )
     
-    st.caption("Format universel")
+    st.caption("Universal format")
 
 
 def _render_json_export(df: pd.DataFrame, key_prefix: str):
-    """Affiche le bouton d'export JSON."""
+    """Displays JSON export button."""
     
     st.markdown("#### 📋 JSON")
     
     json_data = df.to_json(orient='records', force_ascii=False, indent=2)
     
     st.download_button(
-        "📥 Télécharger .json",
+        "📥 Download .json",
         data=json_data,
         file_name=f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
         mime="application/json",
@@ -164,12 +164,12 @@ def _render_json_export(df: pd.DataFrame, key_prefix: str):
         use_container_width=True
     )
     
-    st.caption("Pour API/web")
+    st.caption("For API/web")
 
 
 def render_quick_export_buttons(df: pd.DataFrame, key_prefix: str = "quick"):
     """
-    Affiche des boutons d'export rapides (sans options).
+    Displays quick export buttons (without options).
     """
     
     if df is None or df.empty:
@@ -202,47 +202,47 @@ def render_quick_export_buttons(df: pd.DataFrame, key_prefix: str = "quick"):
 
 def render_multi_sheet_export(
     sheets: Dict[str, pd.DataFrame],
-    title: str = "📥 Export multi-feuilles",
+    title: str = "📥 Multi-Sheet Export",
     key_prefix: str = "multi"
 ):
     """
-    Permet d'exporter plusieurs feuilles dans un seul fichier Excel.
+    Allows exporting multiple sheets into a single Excel file.
     
     Args:
-        sheets: Dict {nom_feuille: DataFrame}
-        title: Titre du panneau
-        key_prefix: Préfixe pour les clés
+        sheets: Dict {sheet_name: DataFrame}
+        title: Panel title
+        key_prefix: Prefix for keys
     """
     
     if not sheets:
-        st.info("Aucune donnée à exporter")
+        st.info("No data to export")
         return
     
     st.markdown(f"### {title}")
-    st.caption(f"📑 {len(sheets)} feuilles disponibles")
+    st.caption(f"📑 {len(sheets)} sheets available")
     
-    # Sélection des feuilles à exporter
+    # Select sheets to export
     selected = st.multiselect(
-        "Sélectionner les feuilles à inclure",
+        "Select sheets to include",
         options=list(sheets.keys()),
         default=list(sheets.keys()),
         key=f"{key_prefix}_select_sheets"
     )
     
     if not selected:
-        st.warning("Sélectionnez au moins une feuille")
+        st.warning("Select at least one sheet")
         return
     
-    # Préparer le fichier multi-feuilles
+    # Prepare multi-sheet file
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         for sheet_name in selected:
             df = sheets[sheet_name]
-            df.to_excel(writer, sheet_name=sheet_name[:31], index=False)  # Excel limite à 31 chars
+            df.to_excel(writer, sheet_name=sheet_name[:31], index=False)  # Excel limit is 31 chars
     buffer.seek(0)
     
     st.download_button(
-        f"📥 Télécharger ({len(selected)} feuilles)",
+        f"📥 Download ({len(selected)} sheets)",
         data=buffer,
         file_name=f"export_multi_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

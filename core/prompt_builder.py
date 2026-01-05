@@ -6,13 +6,13 @@ from core.data_dictionary_manager import DataDictionaryManager
 
 def detect_excel_intention(question: str) -> Dict[str, bool]:
     """
-    Detecte les intentions liees a Excel dans la question de l'utilisateur.
+    Detects Excel-related intentions in the user's question.
     
     Args:
-        question: Question de l'utilisateur
+        question: User's question
     
     Returns:
-        Dict avec les intentions detectees
+        Dict with detected intentions
     """
     question_lower = question.lower()
     
@@ -40,62 +40,62 @@ def detect_excel_intention(question: str) -> Dict[str, bool]:
 
 def build_excel_instructions(intentions: Dict[str, bool], available_sheets: Optional[List[str]] = None) -> str:
     """
-    Construit les instructions specifiques pour les operations Excel.
+    Builds specific instructions for Excel operations.
     
     Args:
-        intentions: Dict des intentions detectees
-        available_sheets: Liste des feuilles disponibles si multi-sheets
+        intentions: Dict of detected intentions
+        available_sheets: List of available sheets if multi-sheets
     
     Returns:
-        Instructions additionnelles pour le prompt
+        Additional instructions for the prompt
     """
     instructions = []
     
     if intentions.get('pivot_table'):
         instructions.append(
-            " PIVOT TABLE DEMANDE :\n"
-            "- Utilise df.pivot_table(values='...', index='...', columns='...', aggfunc='sum')\n"
-            "- Fonctions d'agregation disponibles : 'sum', 'mean', 'count', 'min', 'max', 'std'\n"
-            "- Pour reset l'index apres pivot : .reset_index()\n"
-            "- Exemple : result = df.pivot_table(values='ventes', index='region', columns='produit', aggfunc='sum').reset_index()"
+            " PIVOT TABLE REQUESTED :\n"
+            "- Use df.pivot_table(values='...', index='...', columns='...', aggfunc='sum')\n"
+            "- Available aggregation functions: 'sum', 'mean', 'count', 'min', 'max', 'std'\n"
+            "- To reset index after pivot: .reset_index()\n"
+            "- Example: result = df.pivot_table(values='sales', index='region', columns='product', aggfunc='sum').reset_index()"
         )
     
     if intentions.get('export_excel'):
         instructions.append(
-            " EXPORT EXCEL :\n"
-            "- Place simplement ton resultat dans la variable 'result'\n"
-            "- L'export Excel sera gere automatiquement par l'application\n"
-            "- N'utilise PAS to_excel() dans ton code"
+            " EXCEL EXPORT :\n"
+            "- Simply place your result in the 'result' variable\n"
+            "- Excel export will be handled automatically by the application\n"
+            "- Do NOT use to_excel() in your code"
         )
     
     if intentions.get('multi_sheets') and available_sheets:
         sheets_str = ', '.join(available_sheets[:5])
         if len(available_sheets) > 5:
-            sheets_str += f", ... ({len(available_sheets)} feuilles au total)"
+            sheets_str += f", ... ({len(available_sheets)} sheets total)"
         instructions.append(
             f" MULTI-SHEETS :\n"
-            f"- Feuilles disponibles : {sheets_str}\n"
-            f"- Travaille avec le DataFrame 'df' qui contient la feuille actuellement selectionnee"
+            f"- Available sheets: {sheets_str}\n"
+            f"- Work with the DataFrame 'df' which contains the currently selected sheet"
         )
     
     if intentions.get('merge'):
         instructions.append(
-            " FUSION/MERGE :\n"
-            "- Pour fusionner deux colonnes en une : df['new'] = df['col1'].astype(str) + df['col2'].astype(str)\n"
-            "- Pour concatener des lignes filtrees : utilisez des conditions booleennes\n"
-            "- La fusion de fichiers multiples est geree automatiquement par l'application"
+            " MERGE/FUSION :\n"
+            "- To merge two columns into one: df['new'] = df['col1'].astype(str) + df['col2'].astype(str)\n"
+            "- To concatenate filtered rows: use boolean conditions\n"
+            "- Multiple file merging is handled automatically by the application"
         )
     
     if intentions.get('groupby'):
         instructions.append(
-            " GROUPBY/AGREGATION :\n"
-            "- Utilise df.groupby('colonne').agg({'col1': 'sum', 'col2': 'mean'})\n"
-            "- Pour plusieurs colonnes : df.groupby(['col1', 'col2'])\n"
-            "- N'oublie pas .reset_index() si tu veux un DataFrame propre en sortie"
+            " GROUPBY/AGGREGATION :\n"
+            "- Use df.groupby('column').agg({'col1': 'sum', 'col2': 'mean'})\n"
+            "- For multiple columns: df.groupby(['col1', 'col2'])\n"
+            "- Don't forget .reset_index() if you want a clean DataFrame as output"
         )
     
     if instructions:
-        return "\n\n INSTRUCTIONS SPECIFIQUES DETECTEES :\n" + "\n\n".join(instructions) + "\n"
+        return "\n\n DETECTED SPECIFIC INSTRUCTIONS :\n" + "\n\n".join(instructions) + "\n"
     return ""
 
 
@@ -129,14 +129,14 @@ def build_prompt(
     business_context: Optional[str] = None
 ) -> str:
     """
-    Construit le prompt enrichi pour le LLM avec detection d'intentions.
+    Builds the enriched prompt for the LLM with intention detection.
     
     Args:
-        df: DataFrame a analyser
-        question: Question de l'utilisateur
-        context: Contexte des echanges precedents
-        available_sheets: Liste des feuilles Excel disponibles
-        user_level: Niveau utilisateur ('beginner' ou 'expert')
+        df: DataFrame to analyze
+        question: User's question
+        context: Context of previous exchanges
+        available_sheets: List of available Excel sheets
+        user_level: User level ('beginner' or 'expert')
         detected_skills: Skills detectees
         data_dictionary: Dictionnaire de donnees enrichi
     
@@ -196,18 +196,18 @@ def build_prompt(
         if context else ""
     )
     
-    # === CONSTRUCTION DU PROMPT FINAL ===
+    # === FINAL PROMPT CONSTRUCTION ===
     prompt = (
         f"{context_part}"
-        f"Tu es un expert Python, Pandas et analyse de donnees.\n"
+        f"You are a Python, Pandas and data analysis expert.\n"
         f"{user_context}"
         f"{skills_info}"
         f"\n"
-        f" DONNEES A ANALYSER:\n"
-        f"Le DataFrame 'df' contient **{n_rows:,} lignes** et **{len(df.columns)} colonnes**.\n"
-        f"\nApercu des 5 premieres lignes:\n{preview}\n\n"
-        f" Colonnes disponibles:\n{columns}\n\n"
-        f" Types de colonnes:\n{type_analysis}\n\n"
+        f" DATA TO ANALYZE:\n"
+        f"The DataFrame 'df' contains **{n_rows:,} rows** and **{len(df.columns)} columns**.\n"
+        f"\nPreview of the first 5 rows:\n{preview}\n\n"
+        f" Available columns:\n{columns}\n\n"
+        f" Column types:\n{type_analysis}\n\n"
         f"{unique_str_part}"
         f"{dictionary_context}"
         f"{business_context_str}"
@@ -216,33 +216,33 @@ def build_prompt(
         f"{xlsx_skill_instructions}"
         f"{specialized_instructions}"
         f"\n"
-        f"Tu as acces directement aux fonctions utilitaires (sans import):\n"
+        f"You have direct access to utility functions (without import):\n"
         f"calculate_age, calculate_days_between, extract_year, is_valid_email, "
         f"anonymize_phone, get_country_code, format_currency, round_to, age_category, "
         f"tenure_years, valid_female_percentage, female_percentage, valid_email_percentage, "
         f"mean_age_females, mean_age_males\n"
         f"\n"
-        f" REGLES OBLIGATOIRES:\n"
-        f"1. N'utilise JAMAIS d'import ou from...import\n"
-        f"2. N'utilise JAMAIS pd. ou pandas. (pas de pd.DataFrame, pas de pd.read_csv)\n"
-        f"3. N'ecrase JAMAIS la variable 'df'\n"
-        f"4. Ne limite pas df avec head()/sample() sauf si l'utilisateur demande un apercu\n"
-        f"5. Utilise directement les methodes de df (df.groupby(), df.sum(), etc.)\n"
-        f"6. Pour groupby+apply: travaille sur le groupe passe en argument, pas df[...]\n"
-        f"7. Pour pourcentages: utilise (col == 'valeur').mean() * 100\n"
-        f"8. Stocke ton resultat dans la variable 'result'\n"
-        f"9. Ta reponse doit UNIQUEMENT contenir du code entre <startCode> et <endCode>\n"
-        f"10. Aucun commentaire ni explication en dehors du code\n"
-        f"11. Pas d'affichage avec print() a moins que ce soit la reponse attendue\n"
-        f"12. JAMAIS faire .sum() sur une colonne NON-NUMERIQUE (text, string, etc.)\n"
-        f"13. JAMAIS faire de calculs arithmetiques (+, -, *, /) sur colonnes non-numeriques\n"
-        f"14. Si colonne est text/string: utiliser .count(), .value_counts(), .nunique(), .str.len()\n"
+        f" MANDATORY RULES:\n"
+        f"1. NEVER use import or from...import\n"
+        f"2. NEVER use pd. or pandas. (no pd.DataFrame, no pd.read_csv)\n"
+        f"3. NEVER overwrite the 'df' variable\n"
+        f"4. Don't limit df with head()/sample() unless the user asks for a preview\n"
+        f"5. Use df methods directly (df.groupby(), df.sum(), etc.)\n"
+        f"6. For groupby+apply: work on the group passed as argument, not df[...]\n"
+        f"7. For percentages: use (col == 'value').mean() * 100\n"
+        f"8. Store your result in the 'result' variable\n"
+        f"9. Your response must ONLY contain code between <startCode> and <endCode>\n"
+        f"10. No comments or explanations outside the code\n"
+        f"11. No print() output unless that's the expected response\n"
+        f"12. NEVER do .sum() on a NON-NUMERIC column (text, string, etc.)\n"
+        f"13. NEVER do arithmetic calculations (+, -, *, /) on non-numeric columns\n"
+        f"14. If column is text/string: use .count(), .value_counts(), .nunique(), .str.len()\n"
         f"\n"
-        f" LA QUESTION DE L'UTILISATEUR:\n"
+        f" USER QUESTION:\n"
         f"{question}\n"
         f"\n"
         f"<startCode>\n"
-        f"# Solution pour: {question}\n"
+        f"# Solution for: {question}\n"
         f"<endCode>"
     )
     

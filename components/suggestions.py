@@ -1,5 +1,5 @@
 """
-Composant d'affichage des suggestions intelligentes.
+Smart suggestions display component.
 """
 
 import streamlit as st
@@ -15,13 +15,13 @@ def render_suggestions(
     title: str = "💡 Suggestions"
 ):
     """
-    Affiche les suggestions sous forme de boutons cliquables.
+    Displays suggestions as clickable buttons.
     
     Args:
-        df: DataFrame actuel
-        user_level: Niveau utilisateur ('beginner' ou 'expert')
-        limit: Nombre maximum de suggestions
-        title: Titre de la section
+        df: Current DataFrame
+        user_level: User level ('beginner' or 'expert')
+        limit: Maximum number of suggestions
+        title: Section title
     """
     suggestions = get_suggestions(df=df, user_level=user_level, limit=limit)
     
@@ -30,7 +30,7 @@ def render_suggestions(
     
     st.markdown(f"### {title}")
     
-    # Afficher en colonnes
+    # Display in columns
     cols_per_row = 3
     for i in range(0, len(suggestions), cols_per_row):
         cols = st.columns(cols_per_row)
@@ -53,12 +53,12 @@ def render_suggestion_chips(
     key_prefix: str = "chip"
 ):
     """
-    Affiche les suggestions sous forme de chips/tags horizontaux.
+    Displays suggestions as horizontal chips/tags.
     """
     if not suggestions:
         return
     
-    # CSS pour les chips
+    # CSS for chips
     st.markdown("""
     <style>
     .suggestion-chip {
@@ -94,14 +94,14 @@ def render_followup_suggestions(
     limit: int = 3
 ):
     """
-    Affiche les suggestions de suivi après une réponse.
+    Displays follow-up suggestions after a response.
     """
     followups = get_followup_suggestions(last_question, last_result, limit)
     
     if not followups:
         return
     
-    st.markdown("**💬 Questions de suivi suggérées:**")
+    st.markdown("**💬 Suggested Follow-up Questions:**")
     
     cols = st.columns(len(followups))
     for i, suggestion in enumerate(followups):
@@ -120,39 +120,39 @@ def render_followup_suggestions(
 
 def render_quick_actions(df: Optional[pd.DataFrame] = None):
     """
-    Affiche des actions rapides basées sur les données.
+    Displays quick actions based on data.
     """
     if df is None:
         return
     
-    st.markdown("### ⚡ Actions rapides")
+    st.markdown("### ⚡ Quick Actions")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📊 Résumé statistique", key="quick_stats", use_container_width=True):
-            st.session_state['suggested_question'] = "Résumé statistique complet"
+        if st.button("📊 Statistical Summary", key="quick_stats", use_container_width=True):
+            st.session_state['suggested_question'] = "Complete statistical summary"
             st.rerun()
     
     with col2:
-        if st.button("🔍 Détecter anomalies", key="quick_anomaly", use_container_width=True):
-            st.session_state['suggested_question'] = "Détecte les valeurs aberrantes"
+        if st.button("🔍 Detect Anomalies", key="quick_anomaly", use_container_width=True):
+            st.session_state['suggested_question'] = "Detect outliers"
             st.rerun()
     
     with col3:
-        if st.button("📈 Visualiser", key="quick_viz", use_container_width=True):
-            st.session_state['suggested_question'] = "Génère un graphique récapitulatif"
+        if st.button("📈 Visualize", key="quick_viz", use_container_width=True):
+            st.session_state['suggested_question'] = "Generate a summary chart"
             st.rerun()
     
     with col4:
-        if st.button("📥 Exporter Excel", key="quick_export", use_container_width=True):
-            st.session_state['suggested_question'] = "Exporte les données en Excel"
+        if st.button("📥 Export Excel", key="quick_export", use_container_width=True):
+            st.session_state['suggested_question'] = "Export data to Excel"
             st.rerun()
 
 
 def render_domain_suggestions(df: Optional[pd.DataFrame] = None, limit: int = 3):
     """
-    Affiche des suggestions spécifiques au domaine détecté.
+    Displays domain-specific suggestions.
     """
     if df is None:
         return
@@ -165,12 +165,12 @@ def render_domain_suggestions(df: Optional[pd.DataFrame] = None, limit: int = 3)
     
     domain = suggester.detect_domain()
     domain_names = {
-        'sales': '🛒 Ventes',
-        'hr': '👥 RH',
+        'sales': '🛒 Sales',
+        'hr': '👥 HR',
         'finance': '💰 Finance'
     }
     
-    st.markdown(f"### {domain_names.get(domain, '🎯')} Suggestions métier")
+    st.markdown(f"### {domain_names.get(domain, '🎯')} Business Suggestions")
     
     cols = st.columns(len(domain_suggestions))
     for i, suggestion in enumerate(domain_suggestions):

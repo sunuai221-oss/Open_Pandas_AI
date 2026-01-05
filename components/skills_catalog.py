@@ -1,5 +1,5 @@
 """
-Catalogue des compétences IA pour Open Pandas-AI.
+AI skills catalog for Open Pandas-AI.
 """
 
 import streamlit as st
@@ -11,72 +11,72 @@ SKILLS = [
         'id': 'pivot',
         'name': 'Pivot Tables',
         'icon': '📊',
-        'description': 'Créer des tableaux croisés dynamiques',
+        'description': 'Create pivot tables',
         'keywords': ['pivot', 'croisé', 'crosstab', 'résumer', 'agrégation'],
-        'example': 'Crée un pivot des ventes par région et produit',
+        'example': 'Create a pivot of sales by region and product',
         'category': 'analysis'
     },
     {
         'id': 'viz',
-        'name': 'Visualisations',
+        'name': 'Visualizations',
         'icon': '📈',
-        'description': 'Générer des graphiques automatiquement',
+        'description': 'Generate charts automatically',
         'keywords': ['graphique', 'chart', 'visualiser', 'plot', 'courbe', 'histogramme'],
-        'example': 'Génère un graphique des ventes mensuelles',
+        'example': 'Generate a chart of monthly sales',
         'category': 'visualization'
     },
     {
         'id': 'merge',
-        'name': 'Fusion de fichiers',
+        'name': 'File Merging',
         'icon': '🔗',
-        'description': 'Combiner plusieurs fichiers Excel/CSV',
+        'description': 'Combine multiple Excel/CSV files',
         'keywords': ['fusionner', 'combiner', 'merge', 'join', 'concat'],
-        'example': 'Fusionne les données Q1 et Q2',
+        'example': 'Merge Q1 and Q2 data',
         'category': 'data'
     },
     {
         'id': 'export',
-        'name': 'Export Excel',
+        'name': 'Excel Export',
         'icon': '📥',
-        'description': 'Exporter les résultats formatés',
+        'description': 'Export formatted results',
         'keywords': ['export', 'excel', 'télécharger', 'xlsx', 'sauvegarder'],
-        'example': 'Exporte ce résultat en Excel formaté',
+        'example': 'Export this result to formatted Excel',
         'category': 'export'
     },
     {
         'id': 'anomaly',
-        'name': 'Détection d\'anomalies',
+        'name': 'Anomaly Detection',
         'icon': '🔍',
-        'description': 'Identifier les valeurs aberrantes',
+        'description': 'Identify outliers',
         'keywords': ['anomalie', 'outlier', 'aberrant', 'atypique', 'suspect'],
-        'example': 'Détecte les anomalies dans les ventes',
+        'example': 'Detect anomalies in sales',
         'category': 'analysis'
     },
     {
         'id': 'stats',
-        'name': 'Statistiques',
+        'name': 'Statistics',
         'icon': '🧮',
-        'description': 'Calculs statistiques avancés',
+        'description': 'Advanced statistical calculations',
         'keywords': ['moyenne', 'médiane', 'écart-type', 'corrélation', 'distribution'],
-        'example': 'Calcule les statistiques descriptives complètes',
+        'example': 'Calculate complete descriptive statistics',
         'category': 'analysis'
     },
     {
         'id': 'filter',
-        'name': 'Filtrage avancé',
+        'name': 'Advanced Filtering',
         'icon': '🎯',
-        'description': 'Filtrer et sélectionner des données',
+        'description': 'Filter and select data',
         'keywords': ['filtrer', 'sélectionner', 'where', 'condition', 'critère'],
-        'example': 'Filtre les ventes supérieures à 1000€',
+        'example': 'Filter sales above 1000€',
         'category': 'data'
     },
     {
         'id': 'groupby',
-        'name': 'Agrégation',
+        'name': 'Aggregation',
         'icon': '📦',
-        'description': 'Grouper et agréger des données',
+        'description': 'Group and aggregate data',
         'keywords': ['grouper', 'agréger', 'group by', 'somme', 'total'],
-        'example': 'Total des ventes par catégorie',
+        'example': 'Total sales by category',
         'category': 'analysis'
     },
 ]
@@ -84,29 +84,29 @@ SKILLS = [
 
 def render_skills_sidebar():
     """
-    Affiche le catalogue de skills dans la sidebar.
+    Displays skills catalog in the sidebar.
     """
-    st.sidebar.markdown("### 🛠️ Compétences IA")
+    st.sidebar.markdown("### 🛠️ AI Skills")
     
-    with st.sidebar.expander("Voir les compétences", expanded=False):
+    with st.sidebar.expander("View Skills", expanded=False):
         for skill in SKILLS:
             col1, col2 = st.columns([3, 1])
             with col1:
                 st.markdown(f"**{skill['icon']} {skill['name']}**")
                 st.caption(skill['description'])
             with col2:
-                if st.button("➜", key=f"try_skill_{skill['id']}", help=f"Essayer: {skill['example']}"):
+                if st.button("➜", key=f"try_skill_{skill['id']}", help=f"Try: {skill['example']}"):
                     st.session_state['suggested_question'] = skill['example']
                     st.rerun()
 
 
 def render_skills_grid():
     """
-    Affiche les skills dans une grille (pour la page principale).
+    Displays skills in a grid (for main page).
     """
-    st.markdown("### 🛠️ Compétences de l'agent")
+    st.markdown("### 🛠️ Agent Capabilities")
     
-    # Grouper par catégorie
+    # Group by category
     categories = {}
     for skill in SKILLS:
         cat = skill.get('category', 'other')
@@ -115,11 +115,11 @@ def render_skills_grid():
         categories[cat].append(skill)
     
     category_names = {
-        'analysis': '📊 Analyse',
-        'visualization': '📈 Visualisation',
-        'data': '📁 Données',
+        'analysis': '📊 Analysis',
+        'visualization': '📈 Visualization',
+        'data': '📁 Data',
         'export': '📥 Export',
-        'other': '🔧 Autres'
+        'other': '🔧 Other'
     }
     
     for cat, skills in categories.items():
@@ -131,14 +131,14 @@ def render_skills_grid():
                 with st.container():
                     st.markdown(f"**{skill['icon']} {skill['name']}**")
                     st.caption(skill['description'])
-                    if st.button("Essayer", key=f"grid_skill_{skill['id']}", use_container_width=True):
+                    if st.button("Try", key=f"grid_skill_{skill['id']}", use_container_width=True):
                         st.session_state['suggested_question'] = skill['example']
                         st.rerun()
 
 
 def render_skill_cards(limit: int = 4):
     """
-    Affiche des cartes de skills horizontalement.
+    Displays skill cards horizontally.
     """
     cols = st.columns(limit)
     
@@ -158,19 +158,19 @@ def render_skill_cards(limit: int = 4):
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button("Essayer", key=f"card_skill_{skill['id']}", use_container_width=True):
+            if st.button("Try", key=f"card_skill_{skill['id']}", use_container_width=True):
                 st.session_state['suggested_question'] = skill['example']
 
 
 def detect_skill_from_question(question: str) -> List[Dict]:
     """
-    Détecte les skills pertinents pour une question donnée.
+    Detects relevant skills for a given question.
     
     Args:
-        question: La question de l'utilisateur
+        question: User's question
         
     Returns:
-        Liste des skills détectés
+        List of detected skills
     """
     question_lower = question.lower()
     detected = []
@@ -184,7 +184,7 @@ def detect_skill_from_question(question: str) -> List[Dict]:
 
 def get_skill_by_id(skill_id: str) -> Optional[Dict]:
     """
-    Récupère un skill par son ID.
+    Retrieves a skill by its ID.
     """
     for skill in SKILLS:
         if skill['id'] == skill_id:
@@ -194,9 +194,9 @@ def get_skill_by_id(skill_id: str) -> Optional[Dict]:
 
 def get_skills_for_prompt() -> str:
     """
-    Retourne une description des skills pour enrichir le prompt.
+    Returns a description of skills to enrich the prompt.
     """
-    lines = ["Compétences disponibles:"]
+    lines = ["Available capabilities:"]
     for skill in SKILLS:
         lines.append(f"- {skill['name']}: {skill['description']}")
     return "\n".join(lines)

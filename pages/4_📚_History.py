@@ -1,5 +1,5 @@
 """
-Page History - Historique des analyses.
+History Page - Analysis history.
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 # Configuration
 st.set_page_config(
-    page_title="Open Pandas-AI - Historique",
+    page_title="Open Pandas-AI - History",
     page_icon="📚",
     layout="wide"
 )
@@ -25,7 +25,7 @@ session = get_session_manager()
 render_minimal_sidebar()
 
 # Header
-st.title("📚 Historique des analyses")
+st.title("📚 Analysis History")
 
 # Stats overview
 col1, col2, col3, col4 = st.columns(4)
@@ -45,13 +45,13 @@ except Exception:
     total_files = 0
 
 with col1:
-    st.metric("📝 Questions totales", total_questions)
+    st.metric("📝 Total Questions", total_questions)
 with col2:
-    st.metric("⚡ Exécutions", total_executions)
+    st.metric("⚡ Executions", total_executions)
 with col3:
-    st.metric("✅ Taux de succès", f"{success_rate:.0f}%")
+    st.metric("✅ Success Rate", f"{success_rate:.0f}%")
 with col4:
-    st.metric("📁 Fichiers traités", total_files)
+    st.metric("📁 Files Processed", total_files)
 
 st.markdown("---")
 
@@ -59,11 +59,11 @@ st.markdown("---")
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col1:
-    search_query = st.text_input("🔍 Rechercher dans les questions", placeholder="Ex: ventes, pivot, moyenne...")
+    search_query = st.text_input("🔍 Search in questions", placeholder="Ex: sales, pivot, average...")
 with col2:
-    status_filter = st.selectbox("Statut", ["Tous", "Succès", "Erreur"])
+    status_filter = st.selectbox("Status", ["All", "Success", "Error"])
 with col3:
-    date_filter = st.selectbox("Période", ["Tout", "Aujourd'hui", "7 derniers jours", "30 derniers jours"])
+    date_filter = st.selectbox("Period", ["All", "Today", "Last 7 days", "Last 30 days"])
 
 st.markdown("---")
 
@@ -73,13 +73,13 @@ try:
         query = db_session.query(Question).order_by(Question.created_at.desc())
         
         # Apply date filter
-        if date_filter == "Aujourd'hui":
+        if date_filter == "Today":
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             query = query.filter(Question.created_at >= today)
-        elif date_filter == "7 derniers jours":
+        elif date_filter == "Last 7 days":
             week_ago = datetime.now() - timedelta(days=7)
             query = query.filter(Question.created_at >= week_ago)
-        elif date_filter == "30 derniers jours":
+        elif date_filter == "Last 30 days":
             month_ago = datetime.now() - timedelta(days=30)
             query = query.filter(Question.created_at >= month_ago)
         
@@ -90,9 +90,9 @@ try:
         questions = query.limit(100).all()
         
         if not questions:
-            st.info("📭 Aucune question trouvée avec ces critères.")
+            st.info("📭 No questions found with these criteria.")
         else:
-            st.markdown(f"### 📋 {len(questions)} résultat(s)")
+            st.markdown(f"### 📋 {len(questions)} result(s)")
             
             for i, q in enumerate(questions):
                 # Get execution info
@@ -101,9 +101,9 @@ try:
                 
                 # Apply status filter
                 if execution:
-                    if status_filter == "Succès" and execution.status != 'success':
+                    if status_filter == "Success" and execution.status != 'success':
                         continue
-                    elif status_filter == "Erreur" and execution.status == 'success':
+                    elif status_filter == "Error" and execution.status == 'success':
                         continue
                 
                 # Display question
@@ -128,37 +128,37 @@ try:
                     
                     # Code
                     if execution and execution.code:
-                        st.markdown("**Code généré:**")
+                        st.markdown("**Generated Code:**")
                         st.code(execution.code, language="python")
                     
                     # Result preview
                     if execution and execution.result:
-                        st.markdown("**Résultat:**")
+                        st.markdown("**Result:**")
                         st.text(execution.result[:500] + "..." if len(execution.result) > 500 else execution.result)
                     
                     # Consulting comment
                     if consulting:
-                        st.markdown("**Analyse:**")
+                        st.markdown("**Analysis:**")
                         st.info(consulting.message[:300] + "..." if len(consulting.message) > 300 else consulting.message)
                     
                     # Actions
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("🔄 Ré-exécuter", key=f"rerun_{q.id}"):
+                        if st.button("🔄 Re-run", key=f"rerun_{q.id}"):
                             st.session_state['suggested_question'] = q.question
                             st.switch_page("pages/3_🤖_Agent.py")
                     with col2:
-                        if st.button("📋 Copier la question", key=f"copy_{q.id}"):
+                        if st.button("📋 Copy Question", key=f"copy_{q.id}"):
                             st.code(q.question)
                     
                     st.markdown("---")
 
 except Exception as e:
-    st.error(f"Erreur lors du chargement de l'historique: {e}")
+    st.error(f"Error loading history: {e}")
 
 # Session history (in-memory)
 st.markdown("---")
-st.markdown("### 💬 Échanges de cette session")
+st.markdown("### 💬 This Session's Exchanges")
 
 exchanges = session.exchanges
 if exchanges:
@@ -178,14 +178,14 @@ if exchanges:
             if exchange.get('auto_comment'):
                 st.info(exchange['auto_comment'])
 else:
-    st.info("Aucun échange dans cette session.")
+    st.info("No exchanges in this session.")
 
 # Navigation
 st.markdown("---")
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("🏠 Accueil", use_container_width=True):
+    if st.button("🏠 Home", use_container_width=True):
         st.switch_page("pages/1_🏠_Home.py")
 with col2:
-    if st.button("🤖 Agent IA", use_container_width=True, type="primary"):
+    if st.button("🤖 AI Agent", use_container_width=True, type="primary"):
         st.switch_page("pages/3_🤖_Agent.py")

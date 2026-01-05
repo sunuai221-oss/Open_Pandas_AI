@@ -1,5 +1,5 @@
 """
-Page Agent - Interface de conversation IA principale.
+Agent Page - Main AI conversation interface.
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ from datetime import datetime
 
 # Configuration
 st.set_page_config(
-    page_title="Open Pandas-AI - Agent IA",
+    page_title="Open Pandas-AI - AI Agent",
     page_icon="🤖",
     layout="wide"
 )
@@ -63,12 +63,12 @@ elif session.business_domain and session.business_domain != "auto":
 render_sidebar()
 
 # Header
-st.title("🤖 Agent IA")
+st.title("🤖 AI Agent")
 
 if not session.has_data:
-    st.warning("⚠️ Aucune donnée chargée")
-    st.info("Chargez un fichier pour commencer à poser des questions.")
-    if st.button("🏠 Charger des données"):
+    st.warning("⚠️ No data loaded")
+    st.info("Load a file to start asking questions.")
+    if st.button("🏠 Load Data"):
         st.switch_page("pages/1_🏠_Home.py")
     st.stop()
 
@@ -78,15 +78,15 @@ analysis_df = session.df_norm if session.df_norm is not None else df
 # Data info bar
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
-    st.markdown(f"**📊 {session.df_name}** — {len(df):,} lignes × {len(df.columns)} colonnes")
+    st.markdown(f"**📊 {session.df_name}** — {len(df):,} rows × {len(df.columns)} columns")
 with col2:
     if session.quality_score:
         if session.quality_score >= 80:
-            st.success(f"✓ Qualité: {session.quality_score:.0f}")
+            st.success(f"✓ Quality: {session.quality_score:.0f}")
         else:
-            st.warning(f"⚠️ Qualité: {session.quality_score:.0f}")
+            st.warning(f"⚠️ Quality: {session.quality_score:.0f}")
 with col3:
-    if st.button("📊 Explorer", key="agent_explore"):
+    if st.button("📊 Explore", key="agent_explore"):
         st.switch_page("pages/2_📊_Data_Explorer.py")
 
 st.markdown("---")
@@ -96,43 +96,43 @@ render_memory_context_banner()
 
 # Dataset preview (only before first exchange)
 if session.has_data and not session.exchanges:
-    st.markdown("### 📊 Aperçu des données")
+    st.markdown("### 📊 Data Preview")
     col_a, col_b = st.columns(2)
     with col_a:
-        st.metric("Lignes", f"{len(df):,}")
+        st.metric("Rows", f"{len(df):,}")
     with col_b:
-        st.metric("Colonnes", f"{len(df.columns):,}")
+        st.metric("Columns", f"{len(df.columns):,}")
 
     preview_rows = 10
     st.dataframe(df.head(preview_rows), use_container_width=True)
-    st.caption(f"Affichage: {min(preview_rows, len(df))} premières lignes")
+    st.caption(f"Display: {min(preview_rows, len(df))} first rows")
     st.markdown("---")
 
 # Chat input
-st.markdown("### 💬 Posez votre question")
+st.markdown("### 💬 Ask your question")
 
 # Check for suggested question
 question = None
 if 'suggested_question' in st.session_state and st.session_state['suggested_question']:
     question = st.session_state['suggested_question']
     st.session_state['suggested_question'] = None
-    st.info(f"💡 Question suggérée: {question}")
+    st.info(f"💡 Suggested question: {question}")
 
 # Input form
 with st.form(key="agent_question_form", clear_on_submit=False):
     user_question = st.text_input(
         "Question",
         value=question or "",
-        placeholder="Ex: Quels sont les 5 meilleurs produits par ventes ?",
+        placeholder="Ex: What are the 5 best products by sales?",
         key="agent_question_input",
         label_visibility="collapsed"
     )
     
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
-        submit = st.form_submit_button("🚀 Analyser", use_container_width=True, type="primary")
+        submit = st.form_submit_button("🚀 Analyze", use_container_width=True, type="primary")
     with col2:
-        generate_viz = st.form_submit_button("📈 + Graphique", use_container_width=True)
+        generate_viz = st.form_submit_button("📈 + Chart", use_container_width=True)
     with col3:
         export_result = st.form_submit_button("📥 + Export", use_container_width=True)
 
@@ -140,13 +140,13 @@ with st.form(key="agent_question_form", clear_on_submit=False):
 if (submit or generate_viz or export_result) and user_question:
     question = user_question.strip()
     
-    # Vérifier que la question n'est pas vide
+    # Check that question is not empty
     if not question:
-        st.warning("⚠️ Veuillez saisir une question.")
+        st.warning("⚠️ Please enter a question.")
         st.stop()
     
-    # Wrapper global pour garantir l'affichage même en cas d'erreur
-    st.write("🔍 **Debug:** Début du traitement de la question")
+    # Global wrapper to ensure display even in case of error
+    st.write("🔍 **Debug:** Start processing question")
     
     exchange = {
         "question": question,
@@ -162,21 +162,21 @@ if (submit or generate_viz or export_result) and user_question:
     should_continue = True
     
     try:
-        # Afficher un indicateur de traitement
-        st.info(f"💬 Traitement de la question: {question[:50]}...")
-        st.write("🔍 **Debug:** Entrée dans le bloc try principal")
+        # Display processing indicator
+        st.info(f"💬 Processing question: {question[:50]}...")
+        st.write("🔍 **Debug:** Entering main try block")
         
         # Detect skills
         detected_skills = detect_skill_from_question(question)
         if detected_skills:
             skills_names = [s['name'] for s in detected_skills]
-            st.caption(f"🛠️ Compétences détectées: {', '.join(skills_names)}")
+            st.caption(f"🛠️ Skills detected: {', '.join(skills_names)}")
         
         # Detect intentions (Phase 1)
         intentions = IntentionDetector.detect_all(question)
         primary_intentions = IntentionDetector.detect_primary(question)
         if primary_intentions:
-            st.caption(f"🎯 Intentions détectées: {', '.join(primary_intentions[:3])}")
+            st.caption(f"🎯 Intentions detected: {', '.join(primary_intentions[:3])}")
         
         # Add to memory
         memory.append("user", question, timestamp=datetime.now().isoformat())
@@ -184,16 +184,16 @@ if (submit or generate_viz or export_result) and user_question:
         # Process with LLM
         code = None
         try:
-            # Vérifier que l'API key est configurée
+            # Check that API key is configured
             import os
             api_key = os.getenv("MISTRAL_API_KEY")
             if not api_key or api_key == "VOTRE_CLE_CODESRAL_ICI":
-                st.error("❌ **Erreur de configuration** : La clé API Mistral n'est pas configurée.")
-                st.info("💡 Veuillez définir la variable d'environnement `MISTRAL_API_KEY` dans un fichier `.env` à la racine du projet.")
-                st.code("MISTRAL_API_KEY=votre_cle_api_ici", language="bash")
+                st.error("❌ **Configuration Error**: Mistral API key is not configured.")
+                st.info("💡 Please set the `MISTRAL_API_KEY` environment variable in a `.env` file at the project root.")
+                st.code("MISTRAL_API_KEY=your_api_key_here", language="bash")
                 st.stop()
             
-            with st.spinner("🧠 Génération du code..."):
+            with st.spinner("🧠 Generating code..."):
                 # Build prompt with enhanced context (Phase 1)
                 context = memory.as_string(last_n=3)
                 available_sheets = list(session.all_sheets.keys()) if session.all_sheets else None
@@ -220,50 +220,50 @@ if (submit or generate_viz or export_result) and user_question:
                 exchange["prompt"] = prompt
                 
                 # Call LLM
-                st.write(f"📡 Appel de l'API {provider_label}...")
+                st.write(f"📡 Calling {provider_label} API...")
                 code = call_llm(prompt, model=llm_model, provider=llm_provider)
-                st.write(f"✅ Code reçu ({len(code)} caractères)")
+                st.write(f"✅ Code received ({len(code)} characters)")
                 
-                # Vérifier que le code n'est pas vide
+                # Check that code is not empty
                 if not code or len(code.strip()) == 0:
-                    st.error("❌ L'IA n'a pas généré de code. Veuillez réessayer.")
+                    st.error("❌ AI did not generate code. Please try again.")
                     should_continue = False
-                    exchange["result"] = "Erreur: Code vide généré par l'IA"
-                    exchange["auto_comment"] = "L'IA n'a pas généré de code valide."
+                    exchange["result"] = "Error: Empty code generated by AI"
+                    exchange["auto_comment"] = "AI did not generate valid code."
                 else:
                     exchange["code"] = code
                     
                     # Security check
                     is_safe, reason = is_code_safe(code)
                     if not is_safe:
-                        st.error(f"⚠️ Code non sécurisé: {reason}")
-                        with st.expander("🔧 Code généré (non sécurisé)"):
+                        st.error(f"⚠️ Unsafe code: {reason}")
+                        with st.expander("🔧 Generated code (unsafe)"):
                             st.code(code, language="python")
                         should_continue = False
-                        exchange["result"] = f"Erreur: Code non sécurisé - {reason}"
-                        exchange["auto_comment"] = "Le code généré a été bloqué pour des raisons de sécurité."
+                        exchange["result"] = f"Error: Unsafe code - {reason}"
+                        exchange["auto_comment"] = "Generated code was blocked for security reasons."
         except requests.exceptions.RequestException as e:
-            st.error(f"❌ **Erreur de connexion API** : {str(e)}")
-            st.info("💡 Vérifiez votre connexion internet et que votre clé API Mistral est valide.")
+            st.error(f"❌ **API Connection Error**: {str(e)}")
+            st.info("💡 Check your internet connection and that your Mistral API key is valid.")
             st.exception(e)
             should_continue = False
-            exchange["result"] = f"Erreur API: {str(e)}"
-            exchange["auto_comment"] = "Impossible de contacter l'API Mistral."
+            exchange["result"] = f"API Error: {str(e)}"
+            exchange["auto_comment"] = "Unable to contact Mistral API."
         except Exception as e:
-            st.error(f"❌ Erreur lors de la génération du code: {str(e)}")
+            st.error(f"❌ Error during code generation: {str(e)}")
             st.exception(e)
             should_continue = False
-            exchange["result"] = f"Erreur: {str(e)}"
-            exchange["auto_comment"] = "Une erreur s'est produite lors de la génération du code."
+            exchange["result"] = f"Error: {str(e)}"
+            exchange["auto_comment"] = "An error occurred during code generation."
         
-        # Si on ne peut pas continuer, afficher quand même ce qu'on a
+        # If we can't continue, still display what we have
         if not should_continue:
             session.add_exchange(exchange)
             st.markdown("---")
-            st.markdown("### 🤖 Réponse")
-            st.error(exchange.get("result", "Erreur inconnue"))
+            st.markdown("### 🤖 Response")
+            st.error(exchange.get("result", "Unknown error"))
             if exchange.get("auto_comment"):
-                st.info(f"🧠 **Analyse:** {exchange['auto_comment']}")
+                st.info(f"🧠 **Analysis:** {exchange['auto_comment']}")
             st.stop()
         
         # Execute code
@@ -271,12 +271,12 @@ if (submit or generate_viz or export_result) and user_question:
         formatted = None
         validation = None
         try:
-            with st.spinner("⚡ Exécution..."):
+            with st.spinner("⚡ Executing..."):
                 raw_result = execute_code(code, analysis_df)
                 
                 # Error handling with auto-correction
-                if isinstance(raw_result, str) and raw_result.startswith("Erreur"):
-                    st.warning("⚠️ Erreur détectée, tentative de correction...")
+                if isinstance(raw_result, str) and raw_result.startswith("Error"):
+                    st.warning("⚠️ Error detected, attempting correction...")
                     
                     correction_attempted = False
                     for new_code in handle_code_error(prompt, code, str(raw_result), max_retries=2, llm_provider=llm_provider, llm_model=llm_model):
@@ -286,21 +286,21 @@ if (submit or generate_viz or export_result) and user_question:
                         
                         correction_attempted = True
                         candidate = execute_code(new_code, df)
-                        if not (isinstance(candidate, str) and candidate.startswith("Erreur")):
-                            st.success("✅ Correction réussie!")
+                        if not (isinstance(candidate, str) and candidate.startswith("Error")):
+                            st.success("✅ Correction successful!")
                             raw_result = candidate
                             code = new_code
                             exchange["code"] = new_code
                             break
                     
-                    # Si la correction a échoué, afficher l'erreur
-                    if isinstance(raw_result, str) and raw_result.startswith("Erreur"):
-                        st.error(f"❌ Erreur d'exécution: {raw_result}")
-                        with st.expander("🔧 Code généré (avec erreur)"):
+                    # If correction failed, display error
+                    if isinstance(raw_result, str) and raw_result.startswith("Error"):
+                        st.error(f"❌ Execution error: {raw_result}")
+                        with st.expander("🔧 Generated code (with error)"):
                             st.code(code, language="python")
                 
                 if raw_result is not None:
-                    # Validation et enrichissement du résultat (Phase 1)
+                    # Validation and result enrichment (Phase 1)
                     validation = format_result_with_validation(
                         result=raw_result,
                         question=question,
@@ -311,39 +311,39 @@ if (submit or generate_viz or export_result) and user_question:
                     exchange["result"] = formatted
                     exchange["validation"] = validation
                 else:
-                    st.error("❌ Aucun résultat retourné par l'exécution du code.")
-                    formatted = "Erreur: Aucun résultat"
+                    st.error("❌ No result returned by code execution.")
+                    formatted = "Error: No result"
                     exchange["result"] = formatted
         except Exception as e:
-            st.error(f"❌ Erreur lors de l'exécution du code: {str(e)}")
+            st.error(f"❌ Error during code execution: {str(e)}")
             st.exception(e)
-            formatted = f"Erreur: {str(e)}"
+            formatted = f"Error: {str(e)}"
             exchange["result"] = formatted
             raw_result = formatted
         
         # Consulting analysis (disabled as per user request)
-        auto_comment = "" # Résultat généré avec succès.  # Valeur par défaut
+        auto_comment = "" # Result generated successfully.  # Default value
         # if raw_result is not None:
         #     try:
-        #         with st.spinner("🧠 Analyse professionnelle..."):
+        #         with st.spinner("🧠 Professional analysis..."):
         #             auto_comment = auto_comment_agent(df=df, result=raw_result, lang=session.language, llm_model=llm_model, llm_provider=llm_provider)
         #             if not auto_comment or len(auto_comment.strip()) == 0:
-        #                 auto_comment = "Analyse générée avec succès."
+        #                 auto_comment = "Analysis generated successfully."
         #             exchange["auto_comment"] = auto_comment
         #             memory.append("assistant", auto_comment[:200], timestamp=datetime.now().isoformat())
         #     except Exception as e:
-        #         st.warning(f"⚠️ Erreur lors de l'analyse professionnelle: {str(e)}")
-        #         auto_comment = "Résultat généré avec succès."
+        #         st.warning(f"⚠️ Error during professional analysis: {str(e)}")
+        #         auto_comment = "Result generated successfully."
         #         exchange["auto_comment"] = auto_comment
         # else:
-        #     auto_comment = "Erreur lors de l'exécution."
+        #     auto_comment = "Error during execution."
         #     exchange["auto_comment"] = auto_comment
         
-        # Save to database (optionnel - ne bloque pas l'affichage)
+        # Save to database (optional - doesn't block display)
         try:
             user_id = st.session_state.get('user_id')
             if user_id is None:
-                # Essayer de récupérer ou créer l'utilisateur
+                # Try to retrieve or create user
                 from db.queries import get_or_create_user
                 with get_db_session() as db_session:
                     user = get_or_create_user(db_session, session.session_id)
@@ -357,14 +357,14 @@ if (submit or generate_viz or export_result) and user_question:
                 db_session.refresh(q)
                 
                 is_error = raw_result is None or (
-                    isinstance(raw_result, str) and raw_result.startswith('Erreur')
+                    isinstance(raw_result, str) and raw_result.startswith('Error')
                 )
                 result_text = "" if formatted is None else str(formatted)[:1000]
                 ce = CodeExecution(
                     code=code,
                     result=result_text,
                     status='error' if is_error else 'success',
-                    error_message=str(raw_result)[:500] if isinstance(raw_result, str) and raw_result.startswith('Erreur') else None,
+                    error_message=str(raw_result)[:500] if isinstance(raw_result, str) and raw_result.startswith('Error') else None,
                     model_used=model_used_label,
                     question_id=q.id
                 )
@@ -379,31 +379,31 @@ if (submit or generate_viz or export_result) and user_question:
                 db_session.add(cm)
                 db_session.commit()
         except Exception as e:
-            # Ne pas bloquer l'affichage si la DB échoue
-            st.warning(f"⚠️ Erreur lors de la sauvegarde en base de données (non bloquant): {str(e)[:100]}")
+            # Don't block display if DB fails
+            st.warning(f"⚠️ Error saving to database (non-blocking): {str(e)[:100]}")
         
         # Visualization if requested
         if generate_viz and isinstance(formatted, pd.DataFrame) and not formatted.empty:
-            with st.spinner("📈 Génération du graphique..."):
+            with st.spinner("📈 Generating chart..."):
                 vis_img, vis_info = generate_and_run_visualization(formatted, question, llm_provider=llm_provider, llm_model=llm_model)
                 if vis_img:
                     exchange["vis_img"] = vis_img
                     exchange["vis_info"] = vis_info
         
-        # Add exchange to session (doit être fait avant l'affichage)
+        # Add exchange to session (must be done before display)
         session.add_exchange(exchange)
         
         st.markdown("---")
         
         # Display result with enhanced information (Phase 1)
-        st.markdown("### 🤖 Réponse")
+        st.markdown("### 🤖 Response")
         
-        # Afficher les warnings si présents
+        # Display warnings if present
         if validation and validation.get('warnings'):
             for warning in validation['warnings']:
                 st.warning(warning)
         
-        # Afficher l'interprétation si présente
+        # Display interpretation if present
         if validation and validation.get('interpretation'):
             st.info(f"💡 {validation['interpretation']}")
         
@@ -411,11 +411,11 @@ if (submit or generate_viz or export_result) and user_question:
         if isinstance(formatted, pd.DataFrame):
             if not formatted.empty:
                 max_rows = session.display_max_rows
-                display_df = formatted if max_rows == "Toutes" else formatted.head(int(max_rows))
+                display_df = formatted if max_rows == "All" else formatted.head(int(max_rows))
                 st.dataframe(display_df, use_container_width=True)
-                st.caption(f"Affichage: {len(display_df)} / {len(formatted)} lignes")
+                st.caption(f"Display: {len(display_df)} / {len(formatted)} rows")
                 
-                # Contexte statistique si disponible
+                # Statistical context if available
                 if validation and validation.get('context'):
                     ctx = validation['context']
                     col_a, col_b, col_c = st.columns(3)
@@ -424,11 +424,11 @@ if (submit or generate_viz or export_result) and user_question:
                             st.metric("Dimensions", ctx['shape'])
                     with col_b:
                         if 'full_rows' in ctx:
-                            st.metric("Total complet", f"{ctx['full_rows']:,} lignes")
+                            st.metric("Complete total", f"{ctx['full_rows']:,} rows")
                     with col_c:
                         if 'quality_score' in validation:
                             score = validation['quality_score']
-                            st.metric("Qualité résultat", f"{score}%")
+                            st.metric("Result quality", f"{score}%")
                 
                 # Actions
                 col1, col2, col3 = st.columns(3)
@@ -436,76 +436,76 @@ if (submit or generate_viz or export_result) and user_question:
                     try:
                         buffer = excel_utils.export_dataframe_to_buffer(formatted)
                         st.download_button(
-                            "📥 Télécharger Excel",
+                            "📥 Download Excel",
                             data=buffer,
-                            file_name=f"resultat_{datetime.now().strftime('%H%M%S')}.xlsx",
+                            file_name=f"result_{datetime.now().strftime('%H%M%S')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             key=f"result_excel_{len(session.exchanges)}"
                         )
                     except Exception as e:
-                        st.error(f"Erreur export: {e}")
+                        st.error(f"Export error: {e}")
                 with col2:
-                    if st.button("📈 Générer graphique", key=f"result_viz_{len(session.exchanges)}"):
+                    if st.button("📈 Generate Chart", key=f"result_viz_{len(session.exchanges)}"):
                         try:
-                            with st.spinner("Génération..."):
+                            with st.spinner("Generating..."):
                                 vis_img, _ = generate_and_run_visualization(formatted, question, llm_provider=llm_provider, llm_model=llm_model)
                                 if vis_img:
                                     st.image(vis_img)
                         except Exception as e:
-                            st.error(f"Erreur visualisation: {e}")
+                            st.error(f"Visualization error: {e}")
                 with col3:
                     pass
                 
-                # Suggestions de suivi
+                # Follow-up suggestions
                 if validation and validation.get('suggestions'):
-                    with st.expander("💬 Questions de suivi suggérées"):
+                    with st.expander("💬 Suggested follow-up questions"):
                         for i, suggestion in enumerate(validation['suggestions'], 1):
                             st.write(f"{i}. {suggestion}")
             else:
-                st.warning("⚠️ Le résultat est un DataFrame vide.")
+                st.warning("⚠️ Result is an empty DataFrame.")
         elif formatted is not None:
             st.write(formatted)
         else:
-            st.error("❌ Aucun résultat à afficher.")
+            st.error("❌ No result to display.")
         
         # Visualization
         if exchange.get("vis_img"):
-            st.image(exchange["vis_img"], caption="📈 Visualisation générée")
+            st.image(exchange["vis_img"], caption="📈 Generated visualization")
         
         # Code (if expert mode)
         if session.show_code and code:
-            with st.expander("🔧 Code généré"):
+            with st.expander("🔧 Generated code"):
                 st.code(code, language="python")
         
         # Followup suggestions
         if formatted is not None and not (isinstance(formatted, pd.DataFrame) and formatted.empty):
             render_followup_suggestions(question, formatted)
         
-        # Message de confirmation
-        st.success("✅ Traitement terminé avec succès!")
+        # Confirmation message
+        st.success("✅ Processing completed successfully!")
     
     except Exception as global_error:
-        # En cas d'erreur globale, afficher au moins un message
-        st.error(f"❌ Erreur critique lors du traitement: {str(global_error)}")
+        # In case of global error, display at least a message
+        st.error(f"❌ Critical error during processing: {str(global_error)}")
         st.exception(global_error)
         
-        # Essayer d'afficher ce qui a pu être généré
+        # Try to display what could be generated
         if 'exchange' in locals() and exchange.get('result'):
-            st.markdown("### ⚠️ Résultat partiel")
+            st.markdown("### ⚠️ Partial Result")
             st.write(exchange['result'])
         elif 'formatted' in locals() and formatted:
-            st.markdown("### ⚠️ Résultat partiel")
+            st.markdown("### ⚠️ Partial Result")
             st.write(formatted)
 
 # History
 st.markdown("---")
-st.markdown("### 📚 Historique de la session")
+st.markdown("### 📚 Session History")
 
 exchanges = session.exchanges
 if exchanges:
     render_chat_history(exchanges, show_code=session.show_code, limit=5)
 else:
-    st.info("💭 Posez votre première question pour commencer l'analyse.")
+    st.info("💭 Ask your first question to start the analysis.")
 
 # Memory panel (expandable)
 st.markdown("---")

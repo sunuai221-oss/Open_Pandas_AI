@@ -1,140 +1,144 @@
-# 🧠 Open Pandas-AI - Agent IA d'analyse de données
+# 🧠 Open Pandas-AI - AI Data Analysis Agent
 
-Agent intelligent pour analyser des données avec l'IA. Chargez un CSV/Excel, posez vos questions en langage naturel, obtenez des réponses avec code généré automatiquement.
+Intelligent agent for analyzing data with AI. Load a CSV/Excel file, ask your questions in natural language, get answers with automatically generated code.
 
-## ✨ Dernières mises à jour
+## ✨ Latest Updates
 
-**Phase 2 - Système hybride de dictionnaire** (NOUVEAU):
-- Détection automatique du type de dataset (12+ domaines)
-- Dictionnaires prédéfinis pour E-commerce, CRM, RH, Finance, etc.
-- Enrichissement optionnel avec UI intuitive
-- Intégration au LLM pour meilleur contexte métier
-- Amélioration qualité réponses estimée: +15-25%
+**Phase 2 - Hybrid Dictionary System** (NEW):
+- Automatic dataset type detection (12+ domains)
+- Predefined dictionaries for E-commerce, CRM, HR, Finance, etc.
+- Optional enrichment with intuitive UI
+- LLM integration for better business context
+- Estimated response quality improvement: +15-25%
 
-**Phase 1 - Qualité des réponses**:
-- Détection 16 intentions analytiques
-- Validation intelligente des résultats
-- Suggestions d'amélioration
-- Scoring de qualité
+**Phase 1 - Response Quality**:
+- Detection of 16 analytical intentions
+- Intelligent result validation
+- Improvement suggestions
+- Quality scoring
 
-## 🚀 Fonctionnalités
+## 🚀 Features
 
-## Démarrage
+## Getting Started
 
-1. Installer les dépendances :
+1. Install dependencies:
 
+```bash
 pip install -r requirements.txt
+```
 
-2. Exportez votre clé Codestral :
+2. Export your Codestral key:
 
+```bash
 export MISTRAL_API_KEY="sk-..."
+```
 
+3. Launch the Streamlit interface:
 
-3. Lancez l’interface Streamlit :
-
+```bash
 streamlit run app.py
+```
 
+4. Upload a CSV, ask a question ("What are the 5 countries with the most sales?")
 
-4. Uploadez un CSV, posez une question ("Quels sont les 5 pays avec le plus de ventes ?")
+## Features
 
-## Fonctionnalités
+- Automatic Python/Pandas code generation via Codestral
+- Local execution, results displayed directly
+- Compatible with all questions about your CSV files (NL2Pandas)
+- Intelligently formatted results (table, list, text...)
 
-- Génération automatique de code Python/Pandas via Codestral
-- Exécution locale, résultat affiché directement
-- Compatible toutes questions sur vos CSV (NL2Pandas)
-- Résultats intelligemment formatés (table, liste, texte...)
+## MVP Limitations
 
-## Limitations MVP
-
-- Sandbox Docker éphémère disponible (activable via USE_DOCKER_SANDBOX=true)
-- **Pas de visualisation graphique automatique**
-- **Pas de correction automatique des erreurs**
-- **Pas de jointure multi-DataFrames**
-- Utilisation recommandée en environnement de test !
+- Ephemeral Docker sandbox available (enable via USE_DOCKER_SANDBOX=true)
+- **No automatic graphical visualization**
+- **No automatic error correction**
+- **No multi-DataFrame joins**
+- Recommended for use in test environment!
 
 ---
 
-Développé avec ❤️ pour les curieux de l’IA et de la data.
-Crédits : [Mistral AI](https://mistral.ai/) + Pandas + Streamlit
+Developed with ❤️ for AI and data enthusiasts.
+Credits: [Mistral AI](https://mistral.ai/) + Pandas + Streamlit
 
-## Sandbox et securite
+## Sandbox and Security
 
-- Le code Pandas genere est execute dans un sous-processus isole (`core.sandbox_runner`).
-- L'analyse AST est renforcee pour bloquer imports, introspection dangereuse et acces systeme.
-- Ajustez le delai maximal via la variable d'environnement `SANDBOX_TIMEOUT_SECONDS`.
+- Generated Pandas code is executed in an isolated subprocess (`core.sandbox_runner`).
+- AST analysis is reinforced to block imports, dangerous introspection and system access.
+- Adjust the maximum delay via the `SANDBOX_TIMEOUT_SECONDS` environment variable.
 
-## Tests automatiques
+## Automated Tests
 
 ```bash
 pytest
 ```
 
-Les tests couvrent les utilitaires (`core/utils.py`) et un flux d'analyse complet avec un LLM mocke.
+Tests cover utilities (`core/utils.py`) and a complete analysis flow with a mocked LLM.
 
-## Deploiement Docker Compose
+## Docker Compose Deployment
 
-1. Copiez `.env.example` vers `.env` et renseignez vos secrets (cle Mistral, URL Postgres).
-2. Lancez l'ensemble :
+1. Copy `.env.example` to `.env` and fill in your secrets (Mistral key, Postgres URL).
+2. Launch everything:
    ```bash
    docker compose up --build
    ```
-3. Streamlit est disponible sur http://localhost:8501.
-4. La base `db` expose `postgresql+psycopg2://postgres:postgres@db:5432/openpanda` par defaut. Modifiez ces valeurs pour un environnement de production.
+3. Streamlit is available at http://localhost:8501.
+4. The `db` database exposes `postgresql+psycopg2://postgres:postgres@db:5432/openpanda` by default. Modify these values for a production environment.
 
-## Gestion des dependances
+## Dependency Management
 
-- `requirements.txt` fige les versions pour des builds reproductibles.
-- Pour mettre a jour proprement : installez `pip-tools` puis `pip-compile requirements.in` (a introduire si besoin) afin de regenir `requirements.txt`.
-- Pour des workflows plus avances ou mono-repo, Poetry reste une option viable, mais n'est pas necessaire pour ce MVP.
+- `requirements.txt` pins versions for reproducible builds.
+- To update properly: install `pip-tools` then `pip-compile requirements.in` (to introduce if needed) to regenerate `requirements.txt`.
+- For more advanced workflows or mono-repo, Poetry remains a viable option, but is not necessary for this MVP.
 
 
-## Sécurité renforcée avec Docker
+## Enhanced Security with Docker
 
-### Exécution sécurisée par conteneurs éphémères
+### Secure Execution with Ephemeral Containers
 
-Le projet utilise maintenant des **conteneurs Docker éphémères** pour l'exécution du code généré par l'IA :
+The project now uses **ephemeral Docker containers** for executing AI-generated code:
 
-- ✅ Isolation complète : chaque exécution dans un conteneur dédié
-- ✅ Auto-destruction : conteneurs supprimés automatiquement après usage
-- ✅ Limites de ressources : CPU/mémoire/réseau contrôlés
-- ✅ Utilisateur non-privilégié : exécution sans droits administrateur
+- ✅ Complete isolation: each execution in a dedicated container
+- ✅ Auto-destruction: containers automatically deleted after use
+- ✅ Resource limits: CPU/memory/network controlled
+- ✅ Non-privileged user: execution without administrator rights
 
 ### Configuration
 
-1. Construction de l'image sandbox :
+1. Build the sandbox image:
 ```bash
 chmod +x scripts/build-sandbox.sh
 ./scripts/build-sandbox.sh
 ```
 
-2. Activation du mode Docker :
+2. Enable Docker mode:
 ```bash
 export USE_DOCKER_SANDBOX=true
 docker compose up --build
 ```
 
-3. Mode fallback : Si Docker n'est pas disponible, le système utilise automatiquement l'ancien mode subprocess.
+3. Fallback mode: If Docker is not available, the system automatically uses the old subprocess mode.
 
-### Architecture de sécurité
+### Security Architecture
 
 ```
-Question utilisateur
+User Question
     ↓
-Code généré par IA
+AI Generated Code
     ↓
-Validation AST (code_security.py)
+AST Validation (code_security.py)
     ↓
-Conteneur Docker éphémère
-    ├── Isolation réseau (network_mode=none)
-    ├── Limites ressources (512MB RAM, 50% CPU)
-    ├── Utilisateur non-privilégié
-    └── Auto-destruction après exécution
+Ephemeral Docker Container
+    ├── Network isolation (network_mode=none)
+    ├── Resource limits (512MB RAM, 50% CPU)
+    ├── Non-privileged user
+    └── Auto-destruction after execution
     ↓
-Résultat sécurisé
+Secure Result
 ```
 
-### Variables d'environnement
+### Environment Variables
 
-- `USE_DOCKER_SANDBOX=true` : Active l'exécution Docker
-- `SANDBOX_TIMEOUT_SECONDS=30` : Timeout d'exécution
-- `SANDBOX_IMAGE=openpanda-sandbox:latest` : Image à utiliser
+- `USE_DOCKER_SANDBOX=true` : Enables Docker execution
+- `SANDBOX_TIMEOUT_SECONDS=30` : Execution timeout
+- `SANDBOX_IMAGE=openpanda-sandbox:latest` : Image to use

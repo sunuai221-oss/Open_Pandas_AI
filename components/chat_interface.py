@@ -1,5 +1,5 @@
 """
-Interface de chat améliorée pour Open Pandas-AI.
+Enhanced chat interface for Open Pandas-AI.
 """
 
 import streamlit as st
@@ -20,24 +20,24 @@ def render_chat_message(
     key_prefix: str = "msg"
 ):
     """
-    Affiche un message de chat stylisé.
+    Displays a styled chat message.
     
     Args:
-        role: 'user' ou 'assistant'
-        content: Contenu du message
-        timestamp: Horodatage optionnel
-        result: Résultat de l'exécution (DataFrame, etc.)
-        code: Code généré (pour l'assistant)
-        show_code: Afficher le code généré
-        actions: Dict d'actions {label: callback}
-        key_prefix: Préfixe pour les clés Streamlit
+        role: 'user' or 'assistant'
+        content: Message content
+        timestamp: Optional timestamp
+        result: Execution result (DataFrame, etc.)
+        code: Generated code (for assistant)
+        show_code: Show generated code
+        actions: Dict of actions {label: callback}
+        key_prefix: Prefix for Streamlit keys
     """
     
     is_user = role == 'user'
     
-    # Container avec style
+    # Container with style
     with st.container():
-        # En-tête du message
+        # Message header
         col1, col2 = st.columns([1, 10])
         
         with col1:
@@ -47,24 +47,24 @@ def render_chat_message(
                 st.markdown("### 🤖")
         
         with col2:
-            # Nom et timestamp
-            name = "Vous" if is_user else "Assistant IA"
+            # Name and timestamp
+            name = "You" if is_user else "AI Assistant"
             time_str = f" • {timestamp}" if timestamp else ""
             st.markdown(f"**{name}**{time_str}")
             
-            # Contenu du message
+            # Message content
             if is_user:
                 st.markdown(f"> {content}")
             else:
                 st.markdown(content)
         
-        # Résultat (pour l'assistant)
+        # Result (for assistant)
         if result is not None and not is_user:
             _render_result_in_chat(result, key_prefix)
         
-        # Code généré
+        # Generated code
         if code and show_code and not is_user:
-            with st.expander("🔧 Code généré", expanded=False):
+            with st.expander("🔧 Generated Code", expanded=False):
                 st.code(code, language="python")
         
         # Actions
@@ -79,17 +79,17 @@ def render_chat_message(
 
 
 def _render_result_in_chat(result: Any, key_prefix: str):
-    """Affiche le resultat dans le contexte du chat."""
+    """Displays result in chat context."""
     
     if isinstance(result, pd.DataFrame):
         if not result.empty:
             session = get_session_manager()
             max_rows = session.display_max_rows
-            display_df = result if max_rows == "Toutes" else result.head(int(max_rows))
+            display_df = result if max_rows == "All" else result.head(int(max_rows))
             st.dataframe(display_df, use_container_width=True, height=300)
-            st.caption(f"Affichage: {len(display_df)} / {len(result)} lignes - {len(result.columns)} colonnes")
+            st.caption(f"Display: {len(display_df)} / {len(result)} rows - {len(result.columns)} columns")
     elif isinstance(result, (int, float)):
-        st.metric("Resultat", f"{result:,.2f}" if isinstance(result, float) else f"{result:,}")
+        st.metric("Result", f"{result:,.2f}" if isinstance(result, float) else f"{result:,}")
     elif isinstance(result, str):
         st.info(result)
     elif isinstance(result, (list, tuple)):
@@ -99,29 +99,29 @@ def _render_result_in_chat(result: Any, key_prefix: str):
 
 
 def render_chat_input(
-    placeholder: str = "Posez votre question...",
+    placeholder: str = "Ask your question...",
     key: str = "chat_input",
     suggested_question: Optional[str] = None
 ) -> Optional[str]:
     """
-    Affiche la zone de saisie du chat.
+    Displays chat input area.
     
     Args:
-        placeholder: Texte placeholder
-        key: Clé Streamlit
-        suggested_question: Question pré-remplie (depuis suggestions)
+        placeholder: Placeholder text
+        key: Streamlit key
+        suggested_question: Pre-filled question (from suggestions)
     
     Returns:
-        La question saisie ou None
+        The entered question or None
     """
     
-    # Vérifier si une suggestion est en attente
+    # Check if a suggestion is pending
     if 'suggested_question' in st.session_state and st.session_state['suggested_question']:
         suggested = st.session_state['suggested_question']
-        st.session_state['suggested_question'] = None  # Consommer la suggestion
+        st.session_state['suggested_question'] = None  # Consume the suggestion
         return suggested
     
-    # Zone de saisie avec formulaire
+    # Input area with form
     with st.form(key=f"{key}_form", clear_on_submit=True):
         col1, col2 = st.columns([5, 1])
         
@@ -148,19 +148,19 @@ def render_chat_history(
     limit: int = 10
 ):
     """
-    Affiche l'historique du chat.
+    Displays chat history.
     
     Args:
-        exchanges: Liste des échanges
-        show_code: Afficher le code généré
-        limit: Nombre maximum d'échanges à afficher
+        exchanges: List of exchanges
+        show_code: Show generated code
+        limit: Maximum number of exchanges to display
     """
     
     if not exchanges:
-        st.info("💭 Aucun échange pour le moment. Posez une question pour commencer.")
+        st.info("💭 No exchanges yet. Ask a question to start.")
         return
     
-    # Afficher les derniers échanges (du plus récent au plus ancien)
+    # Display last exchanges (from most recent to oldest)
     for i, exchange in enumerate(reversed(exchanges[-limit:])):
         question = exchange.get('question', '')
         result = exchange.get('result')
@@ -168,7 +168,7 @@ def render_chat_history(
         auto_comment = exchange.get('auto_comment', '')
         timestamp = exchange.get('timestamp', '')
         
-        # Message utilisateur
+        # User message
         render_chat_message(
             role='user',
             content=question,
@@ -176,10 +176,10 @@ def render_chat_history(
             key_prefix=f"hist_user_{i}"
         )
         
-        # Message assistant
+        # Assistant message
         render_chat_message(
             role='assistant',
-            content=auto_comment if auto_comment else "Voici le résultat:",
+            content=auto_comment if auto_comment else "Here is the result:",
             result=result,
             code=code,
             show_code=show_code,
@@ -188,10 +188,10 @@ def render_chat_history(
 
 
 def render_typing_indicator():
-    """Affiche un indicateur de frappe/chargement."""
+    """Displays a typing/loading indicator."""
     st.markdown("""
     <div style="display: flex; align-items: center; gap: 5px;">
-        <span>🤖 L'assistant réfléchit</span>
+        <span>🤖 Assistant is thinking</span>
         <div class="typing-dots">
             <span>.</span><span>.</span><span>.</span>
         </div>
@@ -218,11 +218,11 @@ def render_typing_indicator():
 
 def render_processing_status(status: str, progress: float = None):
     """
-    Affiche le statut de traitement.
+    Displays processing status.
     
     Args:
-        status: Message de statut
-        progress: Progression (0-1) ou None pour indéterminé
+        status: Status message
+        progress: Progress (0-1) or None for indeterminate
     """
     
     if progress is not None:

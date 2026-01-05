@@ -1,6 +1,6 @@
 """
-Page Dashboard - Affiche les analyses précédentes dans un format dashboard professionnel
-Inspiré par les templates Keen IO Dashboards
+Dashboard Page - Displays previous analyses in a professional dashboard format
+Inspired by Keen IO Dashboard templates
 """
 
 import streamlit as st
@@ -36,41 +36,41 @@ render_sidebar()
 # === HEADER ===
 render_dashboard_header(
     title="Analytics Dashboard",
-    subtitle="Visualisez toutes vos analyses et résultats",
+    subtitle="Visualize all your analyses and results",
     icon="📈"
 )
 
 # === EMPTY STATE ===
 if not session.exchanges:
     render_empty_state(
-        title="Aucune analyse",
-        description="Commencez par poser une question dans l'Agent pour voir vos analyses ici",
+        title="No Analysis",
+        description="Start by asking a question in the Agent to see your analyses here",
         icon="📭"
     )
     
     col1, col2, col3 = st.columns(3)
     with col2:
-        if st.button("🚀 Aller à l'Agent", use_container_width=True, type="primary"):
+        if st.button("🚀 Go to Agent", use_container_width=True, type="primary"):
             st.switch_page("pages/3_🤖_Agent.py")
     st.stop()
 
-# === RÉSUMÉ ===
-st.markdown("## 📊 Résumé")
+# === SUMMARY ===
+st.markdown("## 📊 Summary")
 render_dashboard_summary(session.exchanges)
 
-# === VUES ===
-tab_grid, tab_timeline, tab_detailed = st.tabs(["📱 Grid View", "📍 Timeline", "🔍 Détail"])
+# === VIEWS ===
+tab_grid, tab_timeline, tab_detailed = st.tabs(["📱 Grid View", "📍 Timeline", "🔍 Detail"])
 
 # Tab 1: Grid View
 with tab_grid:
-    st.markdown("### Vue en grille")
+    st.markdown("### Grid View")
     
     # Options
     col1, col2 = st.columns([2, 1])
     with col1:
-        columns = st.slider("Colonnes", 1, 4, 2)
+        columns = st.slider("Columns", 1, 4, 2)
     with col2:
-        show_code = st.checkbox("Montrer le code", value=False)
+        show_code = st.checkbox("Show Code", value=False)
     
     # Grid
     render_dashboard_grid(
@@ -81,40 +81,40 @@ with tab_grid:
 
 # Tab 2: Timeline
 with tab_timeline:
-    st.markdown("### Vue timeline")
+    st.markdown("### Timeline View")
     render_timeline(session.exchanges)
 
-# Tab 3: Analyse détaillée
+# Tab 3: Detailed Analysis
 with tab_detailed:
-    st.markdown("### Analyse détaillée")
+    st.markdown("### Detailed Analysis")
     
     if session.exchanges:
-        # Sélecteur
+        # Selector
         options = [
-            f"#{len(session.exchanges) - i}: {e.get('question', 'Sans titre')[:50]}"
+            f"#{len(session.exchanges) - i}: {e.get('question', 'No title')[:50]}"
             for i, e in enumerate(session.exchanges)
         ]
-        selected_idx = st.selectbox("Sélectionnez une analyse", range(len(options)), format_func=lambda i: options[i])
+        selected_idx = st.selectbox("Select an analysis", range(len(options)), format_func=lambda i: options[i])
         
         # Afficher l'analyse sélectionnée
         exchange = session.exchanges[selected_idx]
         
         st.markdown(f"### ❓ Question")
-        st.markdown(f"> **{exchange.get('question', 'Sans titre')}**")
+        st.markdown(f"> **{exchange.get('question', 'No title')}**")
         
         if exchange.get('timestamp'):
             st.caption(f"🕐 {exchange['timestamp']}")
         
-        # Résultat
-        st.markdown(f"### 🎯 Résultat")
+        # Result
+        st.markdown(f"### 🎯 Result")
         result = exchange.get('result')
         if isinstance(result, pd.DataFrame):
             st.dataframe(result, use_container_width=True)
-            st.caption(f"📊 {len(result)} lignes × {len(result.columns)} colonnes")
+            st.caption(f"📊 {len(result)} rows × {len(result.columns)} columns")
         else:
             st.write(result)
         
-        # Métadonnées de validation (si disponibles)
+        # Validation metadata (if available)
         if exchange.get('validation'):
             st.markdown(f"### ✅ Validation")
             validation = exchange['validation']
@@ -122,34 +122,34 @@ with tab_detailed:
             col1, col2, col3 = st.columns(3)
             with col1:
                 if 'quality_score' in validation:
-                    st.metric("Score de qualité", f"{validation['quality_score']}%")
+                    st.metric("Quality Score", f"{validation['quality_score']}%")
             with col2:
                 if 'warnings' in validation and validation['warnings']:
-                    st.metric("⚠️ Avertissements", len(validation['warnings']))
+                    st.metric("⚠️ Warnings", len(validation['warnings']))
             with col3:
                 if 'suggestions' in validation and validation['suggestions']:
                     st.metric("💬 Suggestions", len(validation['suggestions']))
             
             # Warnings
             if validation.get('warnings'):
-                with st.expander("📋 Détails des avertissements"):
+                with st.expander("📋 Warning Details"):
                     for w in validation['warnings']:
                         st.warning(w)
             
             # Suggestions
             if validation.get('suggestions'):
-                with st.expander("💬 Questions suggérées"):
+                with st.expander("💬 Suggested Questions"):
                     for i, s in enumerate(validation['suggestions'], 1):
                         st.markdown(f"{i}. {s}")
             
-            # Interprétation
+            # Interpretation
             if validation.get('interpretation'):
-                st.markdown(f"### 💡 Interprétation")
+                st.markdown(f"### 💡 Interpretation")
                 st.info(validation['interpretation'])
         
         # Code
         if exchange.get('code'):
-            with st.expander("🔧 Code exécuté"):
+            with st.expander("🔧 Executed Code"):
                 st.code(exchange['code'], language="python")
 
 # === FOOTER ===
@@ -157,15 +157,15 @@ st.divider()
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    if st.button("➕ Nouvelle analyse", use_container_width=True):
+    if st.button("➕ New Analysis", use_container_width=True):
         st.switch_page("pages/3_🤖_Agent.py")
 
 with col2:
-    if st.button("📊 Explorer les données", use_container_width=True):
+    if st.button("📊 Explore Data", use_container_width=True):
         st.switch_page("pages/2_📊_Data_Explorer.py")
 
 with col3:
-    if st.button("⚙️ Paramètres", use_container_width=True):
+    if st.button("⚙️ Settings", use_container_width=True):
         st.switch_page("pages/5_⚙️_Settings.py")
 
-st.caption("💡 Conseil: Cliquez sur 'Nouvelle analyse' pour ajouter plus d'analyses à ce dashboard")
+st.caption("💡 Tip: Click 'New Analysis' to add more analyses to this dashboard")

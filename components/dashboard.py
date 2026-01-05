@@ -1,6 +1,6 @@
 """
-Dashboard Components - Composants réutilisables pour afficher les analyses en format dashboard
-Inspiré par les templates Keen IO Dashboards
+Dashboard Components - Reusable components to display analyses in dashboard format
+Inspired by Keen IO Dashboard templates
 """
 
 import streamlit as st
@@ -10,12 +10,12 @@ from typing import List, Dict, Any, Optional
 
 def render_dashboard_header(title: str, subtitle: str = "", icon: str = "📊"):
     """
-    Rend l'en-tête du dashboard.
+    Renders dashboard header.
     
     Args:
-        title: Titre principal
-        subtitle: Sous-titre (optionnel)
-        icon: Emoji pour le titre
+        title: Main title
+        subtitle: Subtitle (optional)
+        icon: Emoji for title
     """
     col1, col2 = st.columns([1, 4])
     with col1:
@@ -29,13 +29,13 @@ def render_dashboard_header(title: str, subtitle: str = "", icon: str = "📊"):
 
 def render_metric_card(label: str, value: Any, delta: Optional[str] = None, color: str = "blue"):
     """
-    Rend une card de métrique (KPI).
+    Renders a metric card (KPI).
     
     Args:
-        label: Label de la métrique
-        value: Valeur à afficher
-        delta: Changement optionnel (+5%, -2.3%, etc.)
-        color: Couleur (blue, green, red, orange)
+        label: Metric label
+        value: Value to display
+        delta: Optional change (+5%, -2.3%, etc.)
+        color: Color (blue, green, red, orange)
     """
     with st.container():
         col1, col2 = st.columns([3, 1])
@@ -50,11 +50,11 @@ def render_metric_card(label: str, value: Any, delta: Optional[str] = None, colo
 
 def render_stats_grid(stats: Dict[str, Any], columns: int = 3):
     """
-    Rend une grille de statistiques (KPIs).
+    Renders a statistics grid (KPIs).
     
     Args:
         stats: Dict {label: value, ...}
-        columns: Nombre de colonnes
+        columns: Number of columns
     """
     cols = st.columns(columns)
     
@@ -72,18 +72,18 @@ def render_result_card(
     code: str = ""
 ):
     """
-    Rend une card de résultat d'analyse.
+    Renders an analysis result card.
     
     Args:
-        title: Titre de la card
-        result: Résultat (DataFrame, nombre, texte)
-        question: Question originale
-        timestamp: Timestamp de l'exécution
-        show_code: Afficher le code?
-        code: Code exécuté
+        title: Card title
+        result: Result (DataFrame, number, text)
+        question: Original question
+        timestamp: Execution timestamp
+        show_code: Show code?
+        code: Executed code
     """
     with st.container():
-        # En-tête
+        # Header
         col1, col2 = st.columns([3, 1])
         with col1:
             st.markdown(f"### {title}")
@@ -91,20 +91,20 @@ def render_result_card(
             if timestamp:
                 st.caption(f"🕐 {timestamp}")
         
-        # Contenu
+        # Content
         if isinstance(result, pd.DataFrame):
             st.dataframe(result, use_container_width=True)
-            st.caption(f"📊 {len(result)} lignes × {len(result.columns)} colonnes")
+            st.caption(f"📊 {len(result)} rows × {len(result.columns)} columns")
         else:
             st.write(result)
         
-        # Métadonnées
+        # Metadata
         if question:
             st.caption(f"❓ {question}")
         
-        # Code (optionnel)
+        # Code (optional)
         if show_code and code:
-            with st.expander("🔧 Code exécuté"):
+            with st.expander("🔧 Executed Code"):
                 st.code(code, language="python")
 
 
@@ -114,15 +114,15 @@ def render_dashboard_grid(
     show_code: bool = False
 ):
     """
-    Rend un grid de résultats d'analyse.
+    Renders an analysis results grid.
     
     Args:
-        exchanges: Liste des échanges {question, result, code, timestamp}
-        columns: Nombre de colonnes
-        show_code: Afficher les codes?
+        exchanges: List of exchanges {question, result, code, timestamp}
+        columns: Number of columns
+        show_code: Show codes?
     """
     if not exchanges:
-        st.info("📭 Aucune analyse pour le moment. Commencez par poser une question!")
+        st.info("📭 No analysis yet. Start by asking a question!")
         return
     
     cols = st.columns(columns)
@@ -130,7 +130,7 @@ def render_dashboard_grid(
     for i, exchange in enumerate(exchanges):
         with cols[i % columns]:
             render_result_card(
-                title=f"Analyse #{len(exchanges) - i}",
+                title=f"Analysis #{len(exchanges) - i}",
                 result=exchange.get('result'),
                 question=exchange.get('question', ''),
                 timestamp=exchange.get('timestamp', ''),
@@ -141,19 +141,19 @@ def render_dashboard_grid(
 
 def render_timeline(exchanges: List[Dict[str, Any]]):
     """
-    Rend une timeline des analyses.
+    Renders an analysis timeline.
     
     Args:
-        exchanges: Liste des échanges
+        exchanges: List of exchanges
     """
     if not exchanges:
-        st.info("📭 Aucune analyse pour le moment.")
+        st.info("📭 No analysis yet.")
         return
     
-    st.markdown("### 📍 Timeline des analyses")
+    st.markdown("### 📍 Analysis Timeline")
     
     for i, exchange in enumerate(reversed(exchanges)):
-        # Container pour chaque item
+        # Container for each item
         with st.container():
             col1, col2 = st.columns([1, 10])
             
@@ -162,16 +162,16 @@ def render_timeline(exchanges: List[Dict[str, Any]]):
             
             with col2:
                 # Question
-                st.markdown(f"**❓ {exchange.get('question', 'Sans titre')[:70]}...**")
+                st.markdown(f"**❓ {exchange.get('question', 'No title')[:70]}...**")
                 
                 # Timestamp
                 if exchange.get('timestamp'):
                     st.caption(f"🕐 {exchange['timestamp']}")
                 
-                # Résumé du résultat
+                # Result summary
                 result = exchange.get('result')
                 if isinstance(result, pd.DataFrame):
-                    st.caption(f"📊 {len(result)} lignes")
+                    st.caption(f"📊 {len(result)} rows")
                 elif isinstance(result, str):
                     st.caption(result[:100])
                 else:
@@ -182,27 +182,27 @@ def render_timeline(exchanges: List[Dict[str, Any]]):
 
 def render_dashboard_summary(exchanges: List[Dict[str, Any]]):
     """
-    Rend un résumé du dashboard.
+    Renders dashboard summary.
     
     Args:
-        exchanges: Liste des échanges
+        exchanges: List of exchanges
     """
     if not exchanges:
         return
     
-    # Statistiques
+    # Statistics
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric("📊 Total analyses", len(exchanges))
+        st.metric("📊 Total Analyses", len(exchanges))
     
     with col2:
-        successful = sum(1 for e in exchanges if e.get('result') and not str(e.get('result')).startswith('Erreur'))
-        st.metric("✅ Réussies", successful)
+        successful = sum(1 for e in exchanges if e.get('result') and not str(e.get('result')).startswith('Error'))
+        st.metric("✅ Successful", successful)
     
     with col3:
-        failed = sum(1 for e in exchanges if str(e.get('result', '')).startswith('Erreur'))
-        st.metric("❌ Échouées", failed)
+        failed = sum(1 for e in exchanges if str(e.get('result', '')).startswith('Error'))
+        st.metric("❌ Failed", failed)
 
 
 def render_hero_section(
@@ -212,13 +212,13 @@ def render_hero_section(
     cta_callback=None
 ):
     """
-    Rend une section hero (grand en-tête avec appel à l'action).
+    Renders a hero section (large header with call to action).
     
     Args:
-        title: Titre principal
-        subtitle: Sous-titre
-        cta_button: Texte du bouton (optionnel)
-        cta_callback: Callback du bouton
+        title: Main title
+        subtitle: Subtitle
+        cta_button: Button text (optional)
+        cta_callback: Button callback
     """
     with st.container():
         st.markdown(f"<h1 style='text-align: center; color: #E8A17A;'>{title}</h1>", 
@@ -238,11 +238,11 @@ def render_hero_section(
 
 def render_insight_box(title: str, content: str, icon: str = "💡"):
     """
-    Rend une boîte d'insight/conseil.
+    Renders an insight/advice box.
     
     Args:
-        title: Titre de l'insight
-        content: Contenu
+        title: Insight title
+        content: Content
         icon: Emoji
     """
     with st.container():
@@ -252,14 +252,14 @@ def render_insight_box(title: str, content: str, icon: str = "💡"):
 
 def render_comparison_table(
     data: Dict[str, List[Any]],
-    title: str = "Comparaison"
+    title: str = "Comparison"
 ):
     """
-    Rend un tableau de comparaison.
+    Renders a comparison table.
     
     Args:
-        data: Dict {colonne: [valeurs]}
-        title: Titre
+        data: Dict {column: [values]}
+        title: Title
     """
     st.markdown(f"### {title}")
     df = pd.DataFrame(data)
@@ -268,10 +268,10 @@ def render_comparison_table(
 
 def render_empty_state(title: str, description: str, icon: str = "📭"):
     """
-    Rend un état vide.
+    Renders an empty state.
     
     Args:
-        title: Titre
+        title: Title
         description: Description
         icon: Emoji
     """

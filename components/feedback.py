@@ -1,6 +1,6 @@
 """
-Composants de feedback utilisateur pour Open Pandas-AI.
-Indicateurs de chargement, messages, tooltips et onboarding.
+User feedback components for Open Pandas-AI.
+Loading indicators, messages, tooltips and onboarding.
 """
 
 import streamlit as st
@@ -8,12 +8,12 @@ from typing import Optional, List, Callable
 import time
 
 
-def show_loading(message: str = "Chargement en cours..."):
+def show_loading(message: str = "Loading..."):
     """
-    Affiche un indicateur de chargement stylisé.
+    Displays a styled loading indicator.
     
     Args:
-        message: Message à afficher
+        message: Message to display
     """
     st.markdown(f"""
     <div style="
@@ -46,11 +46,11 @@ def show_loading(message: str = "Chargement en cours..."):
 
 def show_success(message: str, icon: str = "✅"):
     """
-    Affiche un message de succès stylisé.
+    Displays a styled success message.
     
     Args:
-        message: Message de succès
-        icon: Icône à afficher
+        message: Success message
+        icon: Icon to display
     """
     st.markdown(f"""
     <div style="
@@ -68,11 +68,11 @@ def show_success(message: str, icon: str = "✅"):
 
 def show_error(message: str, icon: str = "❌"):
     """
-    Affiche un message d'erreur stylisé.
+    Displays a styled error message.
     
     Args:
-        message: Message d'erreur
-        icon: Icône à afficher
+        message: Error message
+        icon: Icon to display
     """
     st.markdown(f"""
     <div style="
@@ -90,11 +90,11 @@ def show_error(message: str, icon: str = "❌"):
 
 def show_warning(message: str, icon: str = "⚠️"):
     """
-    Affiche un message d'avertissement stylisé.
+    Displays a styled warning message.
     
     Args:
-        message: Message d'avertissement
-        icon: Icône à afficher
+        message: Warning message
+        icon: Icon to display
     """
     st.markdown(f"""
     <div style="
@@ -112,11 +112,11 @@ def show_warning(message: str, icon: str = "⚠️"):
 
 def show_info(message: str, icon: str = "ℹ️"):
     """
-    Affiche un message d'information stylisé.
+    Displays a styled info message.
     
     Args:
-        message: Message d'information
-        icon: Icône à afficher
+        message: Info message
+        icon: Icon to display
     """
     st.markdown(f"""
     <div style="
@@ -134,11 +134,11 @@ def show_info(message: str, icon: str = "ℹ️"):
 
 def show_tooltip(text: str, help_text: str):
     """
-    Affiche un texte avec tooltip.
+    Displays text with tooltip.
     
     Args:
-        text: Texte principal
-        help_text: Texte d'aide au survol
+        text: Main text
+        help_text: Help text on hover
     """
     st.markdown(f"""
     <span title="{help_text}" style="
@@ -154,12 +154,12 @@ def render_progress_steps(
     completed_steps: Optional[List[int]] = None
 ):
     """
-    Affiche une barre de progression avec étapes.
+    Displays a progress bar with steps.
     
     Args:
-        steps: Liste des noms d'étapes
-        current_step: Index de l'étape actuelle (0-based)
-        completed_steps: Liste des indices d'étapes complétées
+        steps: List of step names
+        current_step: Index of current step (0-based)
+        completed_steps: List of completed step indices
     """
     if completed_steps is None:
         completed_steps = list(range(current_step))
@@ -216,7 +216,7 @@ def render_progress_steps(
 
 def render_onboarding():
     """
-    Affiche le guide d'onboarding pour les nouveaux utilisateurs.
+    Displays onboarding guide for new users.
     """
     if st.session_state.get('onboarding_completed', False):
         return
@@ -229,22 +229,22 @@ def render_onboarding():
         margin: 20px 0;
         border: 1px solid rgba(233, 69, 96, 0.3);
     ">
-        <h2 style="color: #e94560; margin-bottom: 20px;">👋 Bienvenue sur Open Pandas-AI !</h2>
+        <h2 style="color: #e94560; margin-bottom: 20px;">👋 Welcome to Open Pandas-AI!</h2>
         <p style="color: var(--text-secondary); margin-bottom: 20px;">
-            Analysez vos données en langage naturel grâce à l'intelligence artificielle.
+            Analyze your data in natural language using artificial intelligence.
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Étapes
+    # Steps
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown("""
         <div style="text-align: center; padding: 15px;">
             <div style="font-size: 2rem;">📂</div>
-            <h4>1. Charger</h4>
-            <p style="font-size: 12px; color: var(--text-secondary);">Uploadez un fichier CSV ou Excel</p>
+            <h4>1. Load</h4>
+            <p style="font-size: 12px; color: var(--text-secondary);">Upload a CSV or Excel file</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -252,8 +252,8 @@ def render_onboarding():
         st.markdown("""
         <div style="text-align: center; padding: 15px;">
             <div style="font-size: 2rem;">🔍</div>
-            <h4>2. Explorer</h4>
-            <p style="font-size: 12px; color: var(--text-secondary);">Vérifiez la qualité de vos données</p>
+            <h4>2. Explore</h4>
+            <p style="font-size: 12px; color: var(--text-secondary);">Check your data quality</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -261,8 +261,8 @@ def render_onboarding():
         st.markdown("""
         <div style="text-align: center; padding: 15px;">
             <div style="font-size: 2rem;">💬</div>
-            <h4>3. Questionner</h4>
-            <p style="font-size: 12px; color: var(--text-secondary);">Posez vos questions en français</p>
+            <h4>3. Question</h4>
+            <p style="font-size: 12px; color: var(--text-secondary);">Ask your questions in natural language</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -270,12 +270,12 @@ def render_onboarding():
         st.markdown("""
         <div style="text-align: center; padding: 15px;">
             <div style="font-size: 2rem;">📥</div>
-            <h4>4. Exporter</h4>
-            <p style="font-size: 12px; color: var(--text-secondary);">Téléchargez les résultats en Excel</p>
+            <h4>4. Export</h4>
+            <p style="font-size: 12px; color: var(--text-secondary);">Download results to Excel</p>
         </div>
         """, unsafe_allow_html=True)
     
-    if st.button("✓ J'ai compris, commencer", key="onboarding_dismiss", type="primary"):
+    if st.button("✓ Got it, let's start", key="onboarding_dismiss", type="primary"):
         st.session_state['onboarding_completed'] = True
         st.rerun()
 
@@ -288,14 +288,14 @@ def render_empty_state(
     action_callback: Optional[Callable] = None
 ):
     """
-    Affiche un état vide avec message et action optionnelle.
+    Displays empty state with message and optional action.
     
     Args:
-        title: Titre
-        message: Message explicatif
-        icon: Icône
-        action_label: Label du bouton d'action
-        action_callback: Callback du bouton
+        title: Title
+        message: Explanatory message
+        icon: Icon
+        action_label: Action button label
+        action_callback: Button callback
     """
     st.markdown(f"""
     <div style="

@@ -10,7 +10,7 @@ from core.dataset_adapters import normalize_df_for_example
 from core.session_manager import get_session_manager
 
 
-def render_business_domain_selector(title: str = "Contexte metier") -> None:
+def render_business_domain_selector(title: str = "Business Context") -> None:
     session = get_session_manager()
     st.markdown(f"### {title}")
 
@@ -21,7 +21,7 @@ def render_business_domain_selector(title: str = "Contexte metier") -> None:
     current_domain = session.business_domain if session.business_domain in domain_options else "auto"
 
     domain = st.selectbox(
-        "Domaine",
+        "Domain",
         options=domain_options,
         index=domain_options.index(current_domain),
         format_func=lambda d: d.upper() if d != "auto" else "Auto-detection",
@@ -36,7 +36,7 @@ def render_business_domain_selector(title: str = "Contexte metier") -> None:
         st.session_state.pop('dictionary_loaded_at', None)
 
     if domain == "auto":
-        st.caption("Auto-detection activee")
+        st.caption("Auto-detection enabled")
         return
 
     examples = domains.get(domain, [])
@@ -45,11 +45,11 @@ def render_business_domain_selector(title: str = "Contexte metier") -> None:
 
     current_example = session.business_example_key if session.business_example_key in example_keys else None
     if not example_keys:
-        st.warning("Aucun exemple disponible pour ce domaine.")
+        st.warning("No example available for this domain.")
         return
 
     selected = st.selectbox(
-        "Jeu de donnees",
+        "Dataset",
         options=example_keys,
         index=example_keys.index(current_example) if current_example in example_keys else 0,
         format_func=lambda k: example_labels.get(k, k),

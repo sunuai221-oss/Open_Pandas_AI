@@ -1,5 +1,5 @@
 """
-Composant de visualisation de la mémoire de session.
+Session memory visualization component.
 """
 
 import streamlit as st
@@ -10,33 +10,33 @@ from core.memory import SessionMemory
 
 def render_memory_panel(expanded: bool = False, show_actions: bool = True):
     """
-    Affiche le panneau complet de visualisation de la mémoire.
+    Displays the complete memory visualization panel.
     
     Args:
-        expanded: Si True, le panneau est ouvert par défaut
-        show_actions: Si True, affiche les boutons d'action
+        expanded: If True, panel is open by default
+        show_actions: If True, displays action buttons
     """
     memory = SessionMemory()
     messages = memory.get_all()
     
-    st.markdown("### 🧠 Contexte mémoire")
+    st.markdown("### 🧠 Memory Context")
     
     if not messages:
-        st.info("💭 L'agent n'a pas encore de contexte. Posez une question pour commencer.")
+        st.info("💭 The agent doesn't have context yet. Ask a question to start.")
         return
     
-    # Indicateur de contexte
-    st.success(f"✓ {len(messages)} échanges en mémoire - L'agent se souvient du contexte")
+    # Context indicator
+    st.success(f"✓ {len(messages)} exchanges in memory - Agent remembers context")
     
-    # Affichage des messages
-    with st.expander(f"Voir les {len(messages)} derniers échanges", expanded=expanded):
+    # Display messages
+    with st.expander(f"View last {len(messages)} exchanges", expanded=expanded):
         for i, msg in enumerate(messages):
             role = msg.get('role', 'unknown')
             content = msg.get('content', '')
             timestamp = msg.get('timestamp', '')
             
             if role == 'user':
-                st.markdown(f"**👤 Vous** {f'• {timestamp}' if timestamp else ''}")
+                st.markdown(f"**👤 You** {f'• {timestamp}' if timestamp else ''}")
                 st.markdown(f"> {content}")
             else:
                 st.markdown(f"**🤖 Assistant** {f'• {timestamp}' if timestamp else ''}")
@@ -50,15 +50,15 @@ def render_memory_panel(expanded: bool = False, show_actions: bool = True):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("🗑️ Effacer la mémoire", key="memory_clear", use_container_width=True):
+            if st.button("🗑️ Clear Memory", key="memory_clear", use_container_width=True):
                 memory.clear()
-                st.success("Mémoire effacée")
+                st.success("Memory cleared")
                 st.rerun()
         
         with col2:
             export_data = json.dumps(memory.export(), ensure_ascii=False, indent=2)
             st.download_button(
-                "💾 Exporter JSON",
+                "💾 Export JSON",
                 data=export_data,
                 file_name="memory_export.json",
                 mime="application/json",
@@ -68,7 +68,7 @@ def render_memory_panel(expanded: bool = False, show_actions: bool = True):
         
         with col3:
             uploaded = st.file_uploader(
-                "📂 Importer",
+                "📂 Import",
                 type=['json'],
                 key="memory_import",
                 label_visibility="collapsed"
@@ -77,23 +77,23 @@ def render_memory_panel(expanded: bool = False, show_actions: bool = True):
                 try:
                     imported = json.load(uploaded)
                     memory.import_history(imported)
-                    st.success("Mémoire importée")
+                    st.success("Memory imported")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Erreur d'import: {e}")
+                    st.error(f"Import error: {e}")
 
 
 def render_memory_indicator():
     """
-    Affiche un indicateur compact du statut de la mémoire.
+    Displays a compact memory status indicator.
     """
     memory = SessionMemory()
     messages = memory.get_all()
     
     if messages:
-        st.markdown(f"🧠 **{len(messages)}** échanges en contexte")
+        st.markdown(f"🧠 **{len(messages)}** exchanges in context")
     else:
-        st.caption("🧠 Mémoire vide")
+        st.caption("🧠 Memory empty")
 
 
 def render_memory_context_banner():

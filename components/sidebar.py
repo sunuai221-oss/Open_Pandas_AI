@@ -1,6 +1,6 @@
 """
-Sidebar contextuelle unifiée pour Open Pandas-AI.
-Affiche les informations de session, mémoire, skills et données actives.
+Unified contextual sidebar for Open Pandas-AI.
+Displays session information, memory, skills and active data.
 """
 
 import streamlit as st
@@ -13,41 +13,41 @@ from components.business_domain_selector import render_business_domain_selector
 
 def render_sidebar():
     """
-    Affiche la sidebar contextuelle complète.
+    Displays the complete contextual sidebar.
     """
     init_theme_system("light")
     session = get_session_manager()
     
-    # Logo et titre
+    # Logo and title
     st.sidebar.markdown("## 🤖 Open Pandas-AI")
     st.sidebar.markdown("---")
     
-    # Section Session
+    # Session section
     _render_session_info(session)
     
     st.sidebar.markdown("---")
     
-    # Section Mémoire
+    # Memory section
     _render_memory_status()
     
     st.sidebar.markdown("---")
     
-    # Section Données actives
+    # Active data section
     _render_data_status(session)
 
     st.sidebar.markdown("---")
 
-    # Section Contexte metier
-    render_business_domain_selector(title="Contexte metier")
+    # Business context section
+    render_business_domain_selector(title="Business Context")
 
     st.sidebar.markdown("---")
     
-    # Section Préférences
+    # Preferences section
     _render_preferences(session)
 
 
 def _render_session_info(session):
-    """Affiche les informations de session."""
+    """Displays session information."""
     st.sidebar.markdown("### 👤 Session")
     
     col1, col2 = st.sidebar.columns(2)
@@ -55,26 +55,26 @@ def _render_session_info(session):
         st.caption("ID")
         st.code(session.session_id[:8] + "...")
     with col2:
-        st.caption("Durée")
+        st.caption("Duration")
         st.markdown(f"**{session.session_duration_minutes}** min")
     
-    # Métriques
+    # Metrics
     metrics = session.get_session_metrics()
-    st.sidebar.caption(f"📊 {metrics['exchange_count']} échanges")
+    st.sidebar.caption(f"📊 {metrics['exchange_count']} exchanges")
 
 
 def _render_memory_status():
-    """Affiche le statut de la mémoire."""
-    st.sidebar.markdown("### 🧠 Mémoire")
+    """Displays memory status."""
+    st.sidebar.markdown("### 🧠 Memory")
     
     memory = SessionMemory()
     messages = memory.get_all()
     
     if messages:
-        st.sidebar.success(f"✓ {len(messages)} échanges en contexte")
+        st.sidebar.success(f"✓ {len(messages)} exchanges in context")
         
-        # Aperçu des derniers échanges
-        with st.sidebar.expander("Voir le contexte", expanded=False):
+        # Preview of last exchanges
+        with st.sidebar.expander("View context", expanded=False):
             for msg in messages[-3:]:
                 role_icon = "👤" if msg.get('role') == 'user' else "🤖"
                 content = msg.get('content', '')[:50]
@@ -83,7 +83,7 @@ def _render_memory_status():
         # Actions
         col1, col2 = st.sidebar.columns(2)
         with col1:
-            if st.button("🗑️ Effacer", key="sidebar_clear_memory", use_container_width=True):
+            if st.button("🗑️ Clear", key="sidebar_clear_memory", use_container_width=True):
                 memory.clear()
                 st.rerun()
         with col2:
@@ -96,63 +96,63 @@ def _render_memory_status():
                     key="sidebar_download_memory"
                 )
     else:
-        st.sidebar.info("Mémoire vide")
+        st.sidebar.info("Memory empty")
 
 
 def _render_data_status(session):
-    """Affiche le statut des données chargées."""
-    st.sidebar.markdown("### 📊 Données actives")
+    """Displays loaded data status."""
+    st.sidebar.markdown("### 📊 Active Data")
     
     if session.has_data:
         df = session.df
         name = session.df_name or "DataFrame"
         
         st.sidebar.markdown(f"**{name}**")
-        st.sidebar.caption(f"{len(df):,} lignes × {len(df.columns)} colonnes")
+        st.sidebar.caption(f"{len(df):,} rows × {len(df.columns)} columns")
         
-        # Score de qualité
+        # Quality score
         quality = session.quality_score
         if quality is not None:
             if quality >= 80:
-                st.sidebar.success(f"✓ Qualité: {quality:.0f}/100")
+                st.sidebar.success(f"✓ Quality: {quality:.0f}/100")
             elif quality >= 60:
-                st.sidebar.warning(f"⚠️ Qualité: {quality:.0f}/100")
+                st.sidebar.warning(f"⚠️ Quality: {quality:.0f}/100")
             else:
-                st.sidebar.error(f"❌ Qualité: {quality:.0f}/100")
+                st.sidebar.error(f"❌ Quality: {quality:.0f}/100")
         
         # Multi-sheets info
         if session.all_sheets:
-            st.sidebar.caption(f"📑 {len(session.all_sheets)} feuilles disponibles")
+            st.sidebar.caption(f"📑 {len(session.all_sheets)} sheets available")
             if session.selected_sheet:
-                st.sidebar.caption(f"Feuille active: {session.selected_sheet}")
+                st.sidebar.caption(f"Active sheet: {session.selected_sheet}")
         
-        # Bouton pour changer de données
-        if st.sidebar.button("📂 Changer de fichier", key="sidebar_change_file", use_container_width=True):
+        # Button to change data
+        if st.sidebar.button("📂 Change File", key="sidebar_change_file", use_container_width=True):
             session.reset_data()
             st.rerun()
     else:
-        st.sidebar.info("Aucune donnée chargée")
-        st.sidebar.caption("Uploadez un fichier CSV ou Excel pour commencer")
+        st.sidebar.info("No data loaded")
+        st.sidebar.caption("Upload a CSV or Excel file to start")
 
 
 def _render_preferences(session):
-    """Affiche les préférences utilisateur."""
-    st.sidebar.markdown("### ⚙️ Préférences")
+    """Displays user preferences."""
+    st.sidebar.markdown("### ⚙️ Preferences")
     
-    # Mode utilisateur
+    # User mode
     user_level = st.sidebar.selectbox(
         "Mode",
         options=['expert', 'beginner'],
         index=0 if session.user_level == 'expert' else 1,
-        format_func=lambda x: "🎓 Expert" if x == 'expert' else "🌱 Débutant",
+        format_func=lambda x: "🎓 Expert" if x == 'expert' else "🌱 Beginner",
         key="sidebar_user_level"
     )
     if user_level != session.user_level:
         session.set_user_level(user_level)
     
-    # Langue
+    # Language
     language = st.sidebar.selectbox(
-        "Langue",
+        "Language",
         options=['fr', 'en'],
         index=0 if session.language == 'fr' else 1,
         format_func=lambda x: "🇫🇷 Français" if x == 'fr' else "🇬🇧 English",
@@ -161,9 +161,9 @@ def _render_preferences(session):
     if language != session.language:
         session.set_language(language)
     
-    # Afficher le code
+    # Show code
     show_code = st.sidebar.checkbox(
-        "Afficher le code généré",
+        "Show generated code",
         value=session.show_code,
         key="sidebar_show_code"
     )
@@ -174,7 +174,7 @@ def _render_preferences(session):
 
 def render_minimal_sidebar():
     """
-    Affiche une sidebar minimale pour les pages secondaires.
+    Displays a minimal sidebar for secondary pages.
     """
     init_theme_system("light")
     session = get_session_manager()
@@ -182,19 +182,19 @@ def render_minimal_sidebar():
     st.sidebar.markdown("## 🤖 Open Pandas-AI")
     st.sidebar.markdown("---")
     
-    # Info session basique
+    # Basic session info
     st.sidebar.caption(f"Session: {session.session_id[:8]}...")
-    st.sidebar.caption(f"Durée: {session.session_duration_minutes} min")
+    st.sidebar.caption(f"Duration: {session.session_duration_minutes} min")
     
     if session.has_data:
         st.sidebar.markdown("---")
-        st.sidebar.markdown(f"**📊 {session.df_name or 'Données'}**")
-        st.sidebar.caption(f"{len(session.df):,} lignes")
+        st.sidebar.markdown(f"**📊 {session.df_name or 'Data'}**")
+        st.sidebar.caption(f"{len(session.df):,} rows")
 
 
 def render_navigation_buttons():
     """
-    Affiche les boutons de navigation rapide dans la sidebar.
+    Displays quick navigation buttons in the sidebar.
     """
     st.sidebar.markdown("### 🧭 Navigation")
     
@@ -207,5 +207,5 @@ def render_navigation_buttons():
     with col2:
         if st.button("📊 Explorer", key="nav_explorer", use_container_width=True):
             st.switch_page("pages/2_📊_Data_Explorer.py")
-        if st.button("📚 Historique", key="nav_history", use_container_width=True):
+        if st.button("📚 History", key="nav_history", use_container_width=True):
             st.switch_page("pages/4_📚_History.py")

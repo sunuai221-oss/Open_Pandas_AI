@@ -1,12 +1,12 @@
 """
-Page d'accueil - Dashboard principal de Open Pandas-AI.
+Home page - Main dashboard of Open Pandas-AI.
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Configuration de la page
+# Page configuration
 st.set_page_config(
     page_title="Open Pandas-AI - Home",
     page_icon="🤖",
@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Imports des composants et modules
+# Component and module imports
 from components.sidebar import render_sidebar
 from components.suggestions import render_suggestions, render_quick_actions
 from components.skills_catalog import render_skill_cards
@@ -27,7 +27,7 @@ from core.business_examples import get_business_example
 from db.session import get_session
 from db.models import User, UploadedFile
 
-# Initialiser le gestionnaire de session
+# Initialize session manager
 session = get_session_manager()
 
 # Sidebar
@@ -36,8 +36,8 @@ render_sidebar()
 # ============ HEADER ============
 st.markdown("""
 <div style="text-align: center; padding: 20px 0;">
-    <h1>📂 Espace de Travail</h1>
-    <p style="color: var(--text-secondary);">Chargez et gérez vos données pour l'analyse IA</p>
+    <h1>📂 Workspace</h1>
+    <p style="color: var(--text-secondary);">Load and manage your data for AI analysis</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -47,13 +47,13 @@ st.markdown("---")
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.markdown("### 📂 Charger vos données")
+    st.markdown("### 📂 Load your data")
     
     uploaded_files = st.file_uploader(
-        "Glissez vos fichiers ici ou cliquez pour parcourir",
+        "Drag and drop your files here or click to browse",
         type=["csv", "xls", "xlsx", "xlsm"],
         accept_multiple_files=True,
-        help="Formats supportés: CSV, Excel (XLS, XLSX, XLSM)",
+        help="Supported formats: CSV, Excel (XLS, XLSX, XLSM)",
         key="home_uploader"
     )
     
@@ -76,9 +76,9 @@ with col1:
                     uploaded_file.seek(0)
                     
                     if len(sheets) > 1:
-                        st.info(f"📊 {len(sheets)} feuilles détectées")
+                        st.info(f"📊 {len(sheets)} sheets detected")
                         selected_sheet = st.selectbox(
-                            "Sélectionner une feuille",
+                            "Select a sheet",
                             sheets,
                             key="home_sheet_selector"
                         )
@@ -86,7 +86,7 @@ with col1:
                         df = excel_utils.read_excel_multi_sheets(uploaded_file, sheet_name=selected_sheet)
                         session.set_selected_sheet(selected_sheet)
                         
-                        if st.checkbox("Charger toutes les feuilles"):
+                        if st.checkbox("Load all sheets"):
                             uploaded_file.seek(0)
                             all_sheets = excel_utils.read_excel_multi_sheets(uploaded_file, sheet_name=None)
                             session.set_all_sheets(all_sheets)
@@ -99,14 +99,14 @@ with col1:
                         df_norm = normalize_df_for_example(df, session.business_example_key)
                     session.set_df_norm(df_norm)
                 
-                st.success(f"✅ **{filename}** chargé - {len(df):,} lignes × {len(df.columns)} colonnes")
+                st.success(f"✅ **{filename}** loaded - {len(df):,} rows × {len(df.columns)} columns")
                 
-                # ===== SYSTÈME HYBRIDE DE DICTIONNAIRE =====
+                # ===== HYBRID DICTIONARY SYSTEM =====
                 st.markdown("---")
-                st.markdown("### 📚 Dictionnaire de données")
+                st.markdown("### 📚 Data Dictionary")
                 
-                # Détecter le type de dataset
-                with st.spinner("🔍 Analyse du dataset..."):
+                # Detect dataset type
+                with st.spinner("🔍 Analyzing dataset..."):
                     dictionary = None
                     matched_key = None
                     confidence = 0.0
@@ -130,27 +130,27 @@ with col1:
                         df_norm = normalize_df_for_example(df, matched_key)
                         session.set_df_norm(df_norm)
                 
-                # Enrichir avec les statistiques
+                # Enrich with statistics
                 dictionary = DataDictionaryManager.normalize_dictionary(dictionary)
                 stats_df = df_norm if df_norm is not None else df
                 dictionary = DataDictionaryManager.enrich_with_statistics(dictionary, stats_df)
                 
-                # Sauvegarder en session
+                # Save to session
                 DataDictionaryManager.save_to_session(dictionary, st.session_state)
                 
-                # Affichage du résultat de détection
+                # Display detection result
                 col1, col2 = st.columns([3, 1])
                 
                 with col1:
                     if matched_key:
-                        st.success(f"✅ **Type détecté**: {dictionary.get('dataset_name', 'Unknown')}")
-                        st.info(f"Domaine: **{dictionary.get('domain')}** | Confiance: **{confidence*100:.0f}%**")
+                        st.success(f"✅ **Type detected**: {dictionary.get('dataset_name', 'Unknown')}")
+                        st.info(f"Domain: **{dictionary.get('domain')}** | Confidence: **{confidence*100:.0f}%**")
                     else:
-                        st.warning("⚠️ **Type non reconnu** - Dictionnaire généré automatiquement")
-                        st.info(f"Confiance: **Auto-détecte**")
+                        st.warning("⚠️ **Type not recognized** - Dictionary auto-generated")
+                        st.info(f"Confidence: **Auto-detect**")
                 
                 with col2:
-                    if st.button("📖 Voir détails", key="show_dict_details"):
+                    if st.button("📖 View details", key="show_dict_details"):
                         st.session_state['show_dictionary'] = True
                 
                 # Afficher la validation
@@ -184,12 +184,12 @@ with col1:
                             for warning in validation['warnings']:
                                 st.write(f"• {warning}")
                 
-                # Affichage détaillé du dictionnaire
+                # Detailed dictionary display
                 if st.session_state.get('show_dictionary'):
                     st.markdown("---")
-                    st.markdown("#### Dictionnaire complet")
+                    st.markdown("#### Complete Dictionary")
                     
-                    with st.expander("📋 Colonnes et descriptions", expanded=True):
+                    with st.expander("📋 Columns and descriptions", expanded=True):
                         for col_name, col_info in dictionary['columns'].items():
                             col1, col2, col3 = st.columns([2, 1, 2])
                             
@@ -206,19 +206,19 @@ with col1:
                                     stats = col_info['statistics']
                                     st.caption(f"Null: {stats.get('null_pct', 0):.1f}% | Uniques: {stats.get('unique_count', 0)}")
                     
-                    # Option pour enrichir manuellement
-                    if st.button("✏️ Enrichir le dictionnaire", key="enrich_dict"):
+                    # Option to manually enrich
+                    if st.button("✏️ Enrich dictionary", key="enrich_dict"):
                         st.session_state['enrich_mode'] = True
                 
-                # Mode enrichissement
+                # Enrichment mode
                 if st.session_state.get('enrich_mode'):
                     st.markdown("---")
-                    st.markdown("#### ✏️ Enrichissement manuel")
-                    st.info("Ajoutez des descriptions, règles métier et règles de validation")
+                    st.markdown("#### ✏️ Manual Enrichment")
+                    st.info("Add descriptions, business rules and validation rules")
                     
-                    # Sélectionner une colonne à enrichir
+                    # Select a column to enrich
                     cols_to_enrich = [c for c in dictionary['columns'].keys()]
-                    selected_col = st.selectbox("Sélectionner une colonne", cols_to_enrich, key="enrich_col_select")
+                    selected_col = st.selectbox("Select a column", cols_to_enrich, key="enrich_col_select")
                     
                     col_dict = dictionary['columns'][selected_col]
                     
@@ -232,7 +232,7 @@ with col1:
                         )
                         
                         new_type = st.selectbox(
-                            "Type de données",
+                            "Data type",
                             ["string", "integer", "float", "datetime", "enum", "boolean"],
                             index=0,
                             key=f"type_{selected_col}"
@@ -240,26 +240,26 @@ with col1:
                     
                     with col2:
                         new_rules = st.text_area(
-                            "Règles métier (une par ligne)",
+                            "Business rules (one per line)",
                             value="\n".join(col_dict.get('business_rules', [])),
                             key=f"rules_{selected_col}"
                         )
                         
                         new_validation = st.text_area(
-                            "Règles de validation (une par ligne)",
+                            "Validation rules (one per line)",
                             value="\n".join(col_dict.get('validation_rules', [])),
                             key=f"validation_{selected_col}"
                         )
                     
-                    if st.button("💾 Sauvegarder", key="save_enrichment"):
+                    if st.button("💾 Save", key="save_enrichment"):
                         dictionary['columns'][selected_col]['description'] = new_desc
                         dictionary['columns'][selected_col]['data_type'] = new_type
                         dictionary['columns'][selected_col]['business_rules'] = [r.strip() for r in new_rules.split('\n') if r.strip()]
                         dictionary['columns'][selected_col]['validation_rules'] = [r.strip() for r in new_validation.split('\n') if r.strip()]
                         DataDictionaryManager.save_to_session(dictionary, st.session_state)
-                        st.success(f"✅ Colonne '{selected_col}' enrichie")
+                        st.success(f"✅ Column '{selected_col}' enriched")
                 
-                # Enregistrer en base
+                # Save to database
                 with get_session() as db_session:
                     user = db_session.query(User).filter_by(session_id=session.session_id).first()
                     if not user:
@@ -271,18 +271,18 @@ with col1:
                     session.set_user_and_file_ids(user.id, None)
                 
             except Exception as e:
-                st.error(f"Erreur de chargement: {e}")
+                st.error(f"Loading error: {e}")
         else:
-            st.info(f"📁 {len(uploaded_files)} fichiers sélectionnés")
+            st.info(f"📁 {len(uploaded_files)} files selected")
             merge_type = st.radio(
-                "Comment traiter ces fichiers ?",
-                ["Analyser séparément", "Fusionner (concat)"],
+                "How to process these files?",
+                ["Analyze separately", "Merge (concat)"],
                 horizontal=True
             )
             
-            if merge_type == "Analyser séparément":
+            if merge_type == "Analyze separately":
                 names = [f.name for f in uploaded_files]
-                selected = st.selectbox("Fichier à analyser", names)
+                selected = st.selectbox("File to analyze", names)
                 file = next(f for f in uploaded_files if f.name == selected)
                 
                 if file.name.endswith(".csv"):
@@ -294,39 +294,39 @@ with col1:
                 try:
                     df = excel_utils.merge_excel_files(uploaded_files, merge_type='concat')
                     session.set_dataframe(df, f"Merged_{len(uploaded_files)}_files")
-                    st.success(f"✅ Fichiers fusionnés - {len(df):,} lignes")
+                    st.success(f"✅ Files merged - {len(df):,} rows")
                 except Exception as e:
-                    st.error(f"Erreur de fusion: {e}")
+                    st.error(f"Merge error: {e}")
 
 with col2:
     st.markdown("### 📊 Session")
     
     metrics = session.get_session_metrics()
     
-    st.metric("Échanges", metrics['exchange_count'])
-    st.metric("Durée", f"{metrics['duration_minutes']} min")
+    st.metric("Exchanges", metrics['exchange_count'])
+    st.metric("Duration", f"{metrics['duration_minutes']} min")
     
     if session.has_data:
         st.success(f"✅ {session.df_name}")
         if session.quality_score:
-            st.metric("Qualité", f"{session.quality_score:.0f}/100")
+            st.metric("Quality", f"{session.quality_score:.0f}/100")
 
 # ============ DATA PREVIEW ============
 if session.has_data:
     st.markdown("---")
-    st.markdown("### 👀 Aperçu des données")
+    st.markdown("### 👀 Data Preview")
     
     df = session.df
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Lignes", f"{len(df):,}")
+        st.metric("Rows", f"{len(df):,}")
     with col2:
-        st.metric("Colonnes", len(df.columns))
+        st.metric("Columns", len(df.columns))
     with col3:
-        st.metric("Numériques", len(df.select_dtypes(include=['number']).columns))
+        st.metric("Numeric", len(df.select_dtypes(include=['number']).columns))
     with col4:
-        st.metric("Catégorielles", len(df.select_dtypes(include=['object']).columns))
+        st.metric("Categorical", len(df.select_dtypes(include=['object']).columns))
     
     st.dataframe(df.head(10), use_container_width=True)
     
@@ -335,18 +335,18 @@ if session.has_data:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📊 Explorer les données", use_container_width=True):
+        if st.button("📊 Explore Data", use_container_width=True):
             st.switch_page("pages/2_📊_Data_Explorer.py")
     
     with col2:
-        if st.button("🤖 Analyser avec l'IA", use_container_width=True, type="primary"):
+        if st.button("🤖 Analyze with AI", use_container_width=True, type="primary"):
             st.switch_page("pages/3_🤖_Agent.py")
     
     with col3:
-        if st.button("📥 Exporter", use_container_width=True):
+        if st.button("📥 Export", use_container_width=True):
             buffer = excel_utils.export_dataframe_to_buffer(df)
             st.download_button(
-                "Télécharger Excel",
+                "Download Excel",
                 data=buffer,
                 file_name=f"{session.df_name or 'data'}_{datetime.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -360,31 +360,31 @@ if session.has_data:
         df=session.df,
         user_level=session.user_level,
         limit=6,
-        title="💡 Suggestions d'analyse"
+        title="💡 Analysis Suggestions"
     )
     
-    # Vérifier si une suggestion a été cliquée
+    # Check if a suggestion was clicked
     if st.session_state.get('suggested_question'):
         st.switch_page("pages/3_🤖_Agent.py")
 else:
-    st.markdown("### 💡 Pour commencer")
+    st.markdown("### 💡 To Get Started")
     st.info("""
-    1. **Chargez un fichier** CSV ou Excel ci-dessus
-    2. **Explorez** vos données dans l'onglet Data Explorer
-    3. **Posez vos questions** à l'agent IA en langage naturel
-    4. **Exportez** les résultats en Excel
+    1. **Load a file** CSV or Excel above
+    2. **Explore** your data in the Data Explorer tab
+    3. **Ask your questions** to the AI agent in natural language
+    4. **Export** the results to Excel
     """)
 
 # ============ SKILLS ============
 st.markdown("---")
-st.markdown("### 🛠️ Compétences de l'agent")
+st.markdown("### 🛠️ Agent Capabilities")
 render_skill_cards(limit=4)
 
 # ============ FOOTER ============
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: var(--text-secondary); padding: 20px;">
-    <p>Open Pandas-AI — Analyse de données par IA</p>
+    <p>Open Pandas-AI — AI Data Analysis</p>
     <p style="font-size: 12px;">Powered by Codestral (Mistral AI) • Pandas • Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
