@@ -8,7 +8,7 @@ try:
         host="localhost",
         port="5432"
     )
-    print("✅ Connexion réussie à la base PostgreSQL !")
+    print("✅ Successfully connected to PostgreSQL database!")
     conn.close()
 except Exception as e:
-    print(f"❌ Échec de connexion : {e}")
+    print(f"❌ Connection failed: {e}")

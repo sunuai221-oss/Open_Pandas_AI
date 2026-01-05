@@ -5,18 +5,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /sandbox
 
-# Installation des dépendances minimales pour l'exécution
-# openpyxl est inclus pour les opérations Excel futures même si to_excel est bloqué
+# Install minimal dependencies for execution
+# openpyxl is included for future Excel operations even though to_excel is blocked
 RUN pip install --no-cache-dir pandas==2.1.4 openpyxl==3.1.5 xlrd==2.0.1
 
-# Copie uniquement les utilitaires nécessaires
+# Copy only necessary utilities
 COPY core/utils.py /sandbox/
 COPY core/sandbox_runner.py /sandbox/
 
-# Utilisateur non-privilégié pour sécurité renforcée
+# Non-privileged user for enhanced security
 RUN useradd -m -u 1000 sandbox
 USER sandbox
 
-# Point d'entrée pour l'exécution du code
+# Entry point for code execution
 ENTRYPOINT ["python", "sandbox_runner.py"]
 

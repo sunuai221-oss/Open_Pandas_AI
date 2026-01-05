@@ -47,7 +47,7 @@ class TestDataValidator:
 
         dup_issues = [i for i in result["issues"] if i["category"] == "duplicates"]
         assert len(dup_issues) == 1
-        assert "2 lignes dupliquees" in dup_issues[0]["message"]
+        assert "2 duplicated rows" in dup_issues[0]["message"]
         # 2 duplicated (second occurrences) out of 5 rows = 40%
         assert dup_issues[0]["message"].endswith(")")
 

@@ -72,9 +72,9 @@ class DataValidator:
             fail_issue = DataIssue(
                 level=IssueLevel.INFO,
                 category="validator",
-                message=f"Validation non-bloquante: exception capturee: {type(e).__name__}: {e}",
+                message=f"Non-blocking validation: exception caught: {type(e).__name__}: {e}",
                 affected_columns=[],
-                recommendation="Verifier les donnees source ou reessayer la validation.",
+                recommendation="Check source data or retry validation.",
                 impact_score=0.0,
             )
             return {
@@ -91,7 +91,7 @@ class DataValidator:
                     else 0.0,
                 },
                 "recommendations": [
-                    "Validation a echoue partiellement. Consultez le message d'information et reessayez."
+                    "Validation partially failed. Check the info message and retry."
                 ],
             }
 
@@ -99,7 +99,7 @@ class DataValidator:
     def _validate_missing_values(self) -> None:
         df = self.df
         if df.empty:
-            return  # Rien a evaluer
+            return  # Nothing to evaluate
 
         total_rows = len(df)
         if total_rows == 0:
@@ -116,9 +116,9 @@ class DataValidator:
                     DataIssue(
                         level=IssueLevel.CRITICAL,
                         category="missing_values",
-                        message=f"Colonne '{col}' a {missing_pct:.1f}% de valeurs manquantes",
+                        message=f"Column '{col}' has {missing_pct:.1f}% missing values",
                         affected_columns=[col],
-                        recommendation=f"Considerer supprimer '{col}' ou appliquer une imputation robuste",
+                        recommendation=f"Consider removing '{col}' or applying robust imputation",
                         impact_score=min(10.0, missing_pct / 10.0),
                     )
                 )
@@ -127,13 +127,13 @@ class DataValidator:
                     DataIssue(
                         level=IssueLevel.WARNING,
                         category="missing_values",
-                        message=f"Colonne '{col}' a {missing_pct:.1f}% de valeurs manquantes",
+                        message=f"Column '{col}' has {missing_pct:.1f}% missing values",
                         affected_columns=[col],
-                        recommendation=f"Imputer les valeurs manquantes de '{col}' (moyenne/mediane/mode ou modele)",
+                        recommendation=f"Impute missing values for '{col}' (mean/median/mode or model)",
                         impact_score=missing_pct / 20.0,
                     )
                 )
-            # <20% = acceptable => pas d'issue
+            # <20% = acceptable => no issue
 
     def _validate_duplicates(self) -> None:
         df = self.df
@@ -152,9 +152,9 @@ class DataValidator:
             DataIssue(
                 level=level,
                 category="duplicates",
-                message=f"{dup_count} lignes dupliquees ({dup_pct:.1f}%)",
+                message=f"{dup_count} duplicated rows ({dup_pct:.1f}%)",
                 affected_columns=list(map(str, df.columns.tolist())),
-                recommendation="Supprimer les doublons via df.drop_duplicates(inplace=False) et analyser la cause amont",
+                recommendation="Remove duplicates via df.drop_duplicates(inplace=False) and analyze root cause",
                 impact_score=min(8.0, dup_pct / 5.0),
             )
         )
@@ -199,11 +199,11 @@ class DataValidator:
                 DataIssue(
                     level=level,
                     category="outliers",
-                    message=f"Colonne '{col}': {outlier_count} outliers detectes ({outlier_pct:.1f}%)",
+                    message=f"Column '{col}': {outlier_count} outliers detected ({outlier_pct:.1f}%)",
                     affected_columns=[col],
                     recommendation=(
-                        f"Examiner et traiter les outliers de '{col}' (valeurs < {lower:.2f} ou > {upper:.2f});"
-                        " envisager winsorisation, capping, ou robust scaling"
+                        f"Examine and treat outliers in '{col}' (values < {lower:.2f} or > {upper:.2f});"
+                        " consider winsorization, capping, or robust scaling"
                     ),
                     impact_score=float(impact),
                 )
@@ -248,16 +248,16 @@ class DataValidator:
                 seen.add(rec)
         # Generic follow-ups depending on presence of categories
         categories = {i.category for i in self.issues}
-        if "missing_values" in categories and "Plan d'imputation documente" not in seen:
-            msg = "Plan d'imputation documente (par type de variable) pour fiabiliser les analyses"
+        if "missing_values" in categories and "Documented imputation plan" not in seen:
+            msg = "Documented imputation plan (by variable type) to ensure analysis reliability"
             recs.append(msg)
             seen.add(msg)
-        if "duplicates" in categories and "Mettre en place des cles primaires ou contraintes d'unicite" not in seen:
-            msg = "Mettre en place des cles primaires ou contraintes d'unicite dans la source"
+        if "duplicates" in categories and "Set up primary keys or uniqueness constraints" not in seen:
+            msg = "Set up primary keys or uniqueness constraints in the source"
             recs.append(msg)
             seen.add(msg)
-        if "outliers" in categories and "Metriques robustes et procedures de controle des extremes" not in seen:
-            msg = "Metriques robustes et procedures de controle des extremes au chargement"
+        if "outliers" in categories and "Robust metrics and extreme value control procedures" not in seen:
+            msg = "Robust metrics and extreme value control procedures at load time"
             recs.append(msg)
             seen.add(msg)
         return recs

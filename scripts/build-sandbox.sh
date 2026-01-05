@@ -1,15 +1,15 @@
 #!/bin/bash
-# Construction de l'image sandbox Docker
+# Build Docker sandbox image
 
-echo "🔨 Construction de l'image sandbox sécurisée..."
+echo "🔨 Building secure sandbox image..."
 
 docker build -f docker/sandbox.Dockerfile -t openpanda-sandbox:latest .
 
 if [ $? -eq 0 ]; then
-    echo "✅ Image sandbox construite avec succès"
-    echo "📋 Pour activer le mode Docker : export USE_DOCKER_SANDBOX=true"
+    echo "✅ Sandbox image built successfully"
+    echo "📋 To enable Docker mode: export USE_DOCKER_SANDBOX=true"
 else
-    echo "❌ Erreur lors de la construction"
+    echo "❌ Error during build"
     exit 1
 fi
 
