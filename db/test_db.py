@@ -10,22 +10,22 @@ from db.models import User
 def main():
     with get_session() as session:
         try:
-            nouvel_user = User(username="testuser_sqlalchemy")
-            session.add(nouvel_user)
+            new_user = User(username="testuser_sqlalchemy")
+            session.add(new_user)
             session.commit()
-            print(f"Insertion OK, id={nouvel_user.id}, username={nouvel_user.username}")
+            print(f"Insert OK, id={new_user.id}, username={new_user.username}")
 
             user = session.query(User).filter_by(username="testuser_sqlalchemy").first()
             if user:
-                print(f"Lecture OK : id={user.id}, username={user.username}")
+                print(f"Read OK: id={user.id}, username={user.username}")
             else:
-                print("Attention : probleme de lecture apres insertion.")
+                print("Warning: read problem after insertion.")
 
-            session.delete(nouvel_user)
+            session.delete(new_user)
             session.commit()
-            print("Testuser supprime (cleanup)")
+            print("Testuser deleted (cleanup)")
         except Exception as e:
-            print("Erreur lors du test d'insertion/lecture :", e)
+            print("Error during insert/read test:", e)
             session.rollback()
 
 if __name__ == "__main__":

@@ -12,11 +12,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/openpanda
       PYTHONPATH: /app
-      USE_DOCKER_SANDBOX: "true"  # Active l'exécution Docker sécurisée
+      USE_DOCKER_SANDBOX: "true"  # Enable secure Docker execution
       SANDBOX_TIMEOUT_SECONDS: "30"
       DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock  # Accès Docker pour conteneurs éphémères
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker access for ephemeral containers
     command: ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
   db:
     image: postgres:16-alpine
