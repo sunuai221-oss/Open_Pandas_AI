@@ -101,20 +101,20 @@ def build_excel_instructions(intentions: Dict[str, bool], available_sheets: Opti
 
 def build_xlsx_skill_instructions(intentions: Dict[str, bool]) -> str:
     """
-    Ajoute des regles pour les demandes Excel afin d'eviter les erreurs de formule
-    et de garder les classeurs dynamiques.
+    Adds rules for Excel requests to avoid formula errors
+    and keep workbooks dynamic.
     """
     if not any(intentions.values()):
         return ""
 
     return (
         "\n\nXLSX RULES (LLM QUALITY):\n"
-        "- Utilise des formules Excel (ex: '=SUM(A1:A10)') au lieu de valeurs calculees en dur.\n"
-        "- Place les calculs dans des formules, jamais des valeurs Python calculees.\n"
-        "- Pas de lecture/ecriture de fichiers (I/O) dans ce code.\n"
-        "- Si export Excel demande: mets le resultat dans 'result' (DataFrame ou valeur).\n"
-        "- Si une formule est necessaire dans le resultat, place la formule comme string.\n"
-        "- Evite les erreurs de formule: pas de division par zero, references correctes.\n"
+        "- Use Excel formulas (e.g., '=SUM(A1:A10)') instead of hardcoded calculated values.\n"
+        "- Place calculations in formulas, never Python calculated values.\n"
+        "- No file read/write (I/O) in this code.\n"
+        "- If Excel export requested: put result in 'result' (DataFrame or value).\n"
+        "- If a formula is needed in the result, place the formula as a string.\n"
+        "- Avoid formula errors: no division by zero, correct references.\n"
     )
 
 
@@ -124,10 +124,10 @@ def build_prompt(
     context: str = "",
     available_sheets: Optional[List[str]] = None,
     user_level: str = "expert",
-    detected_skills: Optional[List[str]] = None,
-    data_dictionary: Optional[Dict[str, Any]] = None,
-    business_context: Optional[str] = None
-) -> str:
+        detected_skills: Optional[List[str]] = None,
+        data_dictionary: Optional[Dict[str, Any]] = None,
+        business_context: Optional[str] = None
+    ) -> str:
     """
     Builds the enriched prompt for the LLM with intention detection.
     
@@ -137,21 +137,21 @@ def build_prompt(
         context: Context of previous exchanges
         available_sheets: List of available Excel sheets
         user_level: User level ('beginner' or 'expert')
-        detected_skills: Skills detectees
-        data_dictionary: Dictionnaire de donnees enrichi
+        detected_skills: Detected skills
+        data_dictionary: Enriched data dictionary
     
     Returns:
-        Prompt complet et enrichi pour le LLM
+        Complete and enriched prompt for the LLM
     """
-    # === 1. ANALYSE DES DONNEES ===
+    # === 1. DATA ANALYSIS ===
     preview = df.head(5).to_string(index=False)
     columns = ', '.join(str(c) for c in df.columns)
     n_rows = len(df)
     
-    # Analyse des types avec conseils
+    # Type analysis with advice
     type_analysis = _analyze_column_types(df)
     
-    # Apercu valeurs uniques sur colonnes categorielles
+    # Preview unique values on categorical columns
     sample_uniques = []
     for col in df.select_dtypes(include=["object", "category"]).columns:
         uniques = df[col].dropna().unique()[:3]
@@ -159,40 +159,40 @@ def build_prompt(
     
     unique_str_part = ""
     if sample_uniques:
-        unique_str_part = "Exemples de valeurs (colonnes categorielles):\n" + "\n".join(sample_uniques) + "\n"
+        unique_str_part = "Example values (categorical columns):\n" + "\n".join(sample_uniques) + "\n"
     
-    # === 2. DICTIONNAIRE DE DONNEES ===
+    # === 2. DATA DICTIONARY ===
     dictionary_context = ""
     if data_dictionary:
         dictionary_context = DataDictionaryManager.create_prompt_context(data_dictionary) + "\n\n"
     
-    # === 3. DETECTION D'INTENTIONS ===
+    # === 3. INTENTION DETECTION ===
     all_intentions = IntentionDetector.detect_all(question)
     primary_intentions = IntentionDetector.detect_primary(question)
     specialized_instructions = IntentionDetector.get_instructions(all_intentions)
     
-    # === 4. CONTEXTE UTILISATEUR ===
+    # === 4. USER CONTEXT ===
     user_context = ""
     if user_level == "beginner":
-        user_context = " L'utilisateur est debutant - privilegie la clarte et la simplicite du code.\n"
+        user_context = " The user is a beginner - prioritize code clarity and simplicity.\n"
     
     skills_info = ""
     if detected_skills:
         skills_str = ', '.join(detected_skills)
-        skills_info = f" Competences detectees: {skills_str}\n"
+        skills_info = f" Detected skills: {skills_str}\n"
     
-    # === 5. CONTEXTE METIER & QUALITE ===
+    # === 5. BUSINESS CONTEXT & QUALITY ===
     quality_warning = _get_quality_warning(df)
     business_context_str = f"Business context:\n{business_context}\n\n" if business_context else ""
     
-    # === 6. INSTRUCTIONS EXCEL ===
+    # === 6. EXCEL INSTRUCTIONS ===
     intentions_excel = detect_excel_intention(question)
     excel_instructions = build_excel_instructions(intentions_excel, available_sheets)
     xlsx_skill_instructions = build_xlsx_skill_instructions(intentions_excel)
     
-    # === 7. CONTEXTE HISTORIQUE ===
+    # === 7. HISTORICAL CONTEXT ===
     context_part = (
-        f" Historique de la conversation:\n{context}\n\n"
+        f" Conversation history:\n{context}\n\n"
         if context else ""
     )
     
@@ -256,61 +256,61 @@ def _sanitize_ascii(text: str) -> str:
 
 
 def _analyze_column_types(df: pd.DataFrame) -> str:
-    """Analyse les types avec conseils sur le traitement."""
+    """Analyzes types with processing advice."""
     lines = []
     
     for col, dtype in df.dtypes.items():
         dtype_str = str(dtype)
         
-        # Conseil specifique selon le type
+        # Specific advice based on type
         if dtype in ['object', 'string']:
-            # Verifier si c'est une date
+            # Check if it's a date
             sample = df[col].dropna().iloc[0] if len(df[col].dropna()) > 0 else None
             if sample and isinstance(sample, str):
                 if any(sep in str(sample) for sep in ['-', '/', '2024', '2025']):
-                    lines.append(f"   {col} ({dtype}) -  Probablement une date, a convertir en datetime")
+                    lines.append(f"   {col} ({dtype}) - Probably a date, convert to datetime")
                 else:
                     uniques = df[col].nunique()
                     if uniques < 50:
-                        lines.append(f"   {col} ({dtype}) -  Categorique ({uniques} valeurs uniques) -  NE PAS SOMMER, NE PAS FAIRE DE CALCUL NUMERIQUE")
+                        lines.append(f"   {col} ({dtype}) - Categorical ({uniques} unique values) - DO NOT SUM, DO NOT DO NUMERIC CALCULATIONS")
                     else:
-                        lines.append(f"   {col} ({dtype}) - Texte libre ({uniques} valeurs uniques) -  NE PAS SOMMER, NE PAS FAIRE DE CALCUL NUMERIQUE")
+                        lines.append(f"   {col} ({dtype}) - Free text ({uniques} unique values) - DO NOT SUM, DO NOT DO NUMERIC CALCULATIONS")
         
         elif dtype in ['int64', 'int32', 'float64', 'float32']:
-            lines.append(f"   {col} ({dtype}) -  Numerique, pret pour calculs (sum, mean, min, max, etc.)")
+            lines.append(f"   {col} ({dtype}) - Numeric, ready for calculations (sum, mean, min, max, etc.)")
         
         elif dtype == 'bool':
-            lines.append(f"   {col} ({dtype}) -  Booleen (True/False) -  Peut etre somme (.mean() pour %)")
+            lines.append(f"   {col} ({dtype}) - Boolean (True/False) - Can be summed (.mean() for %)")
         
         else:
             lines.append(f"   {col} ({dtype})")
     
-    # Ajouter avertissement global
+    # Add global warning
     non_numeric_cols = df.select_dtypes(exclude=['number', 'bool']).columns.tolist()
     if non_numeric_cols:
-        lines.append(f"\n IMPORTANT: Les colonnes suivantes sont NON-NUMERIQUES et ne peuvent PAS etre sommees:")
+        lines.append(f"\n IMPORTANT: The following columns are NON-NUMERIC and CANNOT be summed:")
         for col in non_numeric_cols:
             lines.append(f"   {col}")
     
-    return '\n'.join(lines) if lines else "Aucune colonne"
+    return '\n'.join(lines) if lines else "No columns"
 
 
 def _get_quality_warning(df: pd.DataFrame) -> str:
-    """Genere un avertissement si la qualite des donnees est mauvaise."""
+    """Generates a warning if data quality is poor."""
     missing_pct = (df.isnull().sum().sum() / (len(df) * len(df.columns))) * 100
     duplicates = df.duplicated().sum()
     
     warnings = []
     
     if missing_pct > 20:
-        warnings.append(f" **Donnees manquantes:** {missing_pct:.1f}% - Utilise dropna() ou fillna()")
+        warnings.append(f" **Missing data:** {missing_pct:.1f}% - Use dropna() or fillna()")
     
     if duplicates > 0:
         dup_pct = (duplicates / len(df)) * 100
-        warnings.append(f"i **Doublons detectes:** {duplicates} lignes ({dup_pct:.1f}%) - Considere drop_duplicates()")
+        warnings.append(f" **Duplicates detected:** {duplicates} rows ({dup_pct:.1f}%) - Consider drop_duplicates()")
     
     if warnings:
-        return " QUALITE DES DONNEES:\n" + "\n".join(warnings) + "\n\n"
+        return " DATA QUALITY:\n" + "\n".join(warnings) + "\n\n"
     
     return ""
 
@@ -323,39 +323,39 @@ def build_pivot_table_prompt(
     suggested_columns: Optional[str] = None
 ) -> str:
     """
-    Construit un prompt specialise pour la creation de pivot tables.
+    Builds a specialized prompt for creating pivot tables.
     
     Args:
-        df: DataFrame source
-        question: Question de l'utilisateur
-        suggested_values: Colonne suggeree pour les valeurs
-        suggested_index: Colonne suggeree pour l'index
-        suggested_columns: Colonne suggeree pour les colonnes
+        df: Source DataFrame
+        question: User's question
+        suggested_values: Suggested column for values
+        suggested_index: Suggested column for index
+        suggested_columns: Suggested column for columns
     
     Returns:
-        Prompt specialise pivot table
+        Specialized pivot table prompt
     """
-    # Analyse des colonnes
+    # Column analysis
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
     
     preview = df.head(3).to_string(index=False)
     
     prompt = (
-        "Tu es un expert en creation de tableaux croises dynamiques (pivot tables) avec Pandas.\n\n"
-        f"DataFrame 'df' ({len(df)} lignes) - Apercu :\n"
+        "You are an expert in creating pivot tables with Pandas.\n\n"
+        f"DataFrame 'df' ({len(df)} rows) - Preview:\n"
         f"{preview}\n\n"
-        f"Colonnes numeriques (pour values) : {', '.join(numeric_cols)}\n"
-        f"Colonnes categorielles (pour index/columns) : {', '.join(categorical_cols)}\n\n"
-        "REGLES :\n"
-        "- Utilise df.pivot_table(values=..., index=..., columns=..., aggfunc=..., fill_value=0)\n"
-        "- Termine par .reset_index() pour obtenir un DataFrame propre\n"
-        "- Stocke le resultat dans la variable 'result'\n"
-        "- N'utilise PAS d'import\n"
-        "- Fonctions d'agregation : 'sum', 'mean', 'count', 'min', 'max'\n\n"
-        f"Question : {question}\n\n"
+        f"Numeric columns (for values): {', '.join(numeric_cols)}\n"
+        f"Categorical columns (for index/columns): {', '.join(categorical_cols)}\n\n"
+        "RULES:\n"
+        "- Use df.pivot_table(values=..., index=..., columns=..., aggfunc=..., fill_value=0)\n"
+        "- End with .reset_index() to get a clean DataFrame\n"
+        "- Store the result in the 'result' variable\n"
+        "- Do NOT use import\n"
+        "- Aggregation functions: 'sum', 'mean', 'count', 'min', 'max'\n\n"
+        f"Question: {question}\n\n"
         "<startCode>\n"
-        f"# Pivot table pour : {question}\n"
+        f"# Pivot table for: {question}\n"
         "<endCode>"
     )
     
@@ -365,20 +365,20 @@ def build_pivot_table_prompt(
 
 def build_xlsx_skill_instructions(intentions: Dict[str, bool]) -> str:
     """
-    Ajoute des regles pour les demandes Excel afin d'eviter les erreurs de formule
-    et de garder les classeurs dynamiques.
+    Adds rules for Excel requests to avoid formula errors
+    and keep workbooks dynamic.
     """
     if not any(intentions.values()):
         return ""
 
     return (
         "\n\nXLSX RULES (LLM QUALITY):\n"
-        "- Utilise des formules Excel (ex: '=SUM(A1:A10)') au lieu de valeurs calculees en dur.\n"
-        "- Place les calculs dans des formules, jamais des valeurs Python calculees.\n"
-        "- Pas de lecture/ecriture de fichiers (I/O) dans ce code.\n"
-        "- Si export Excel demande: mets le resultat dans 'result' (DataFrame ou valeur).\n"
-        "- Si une formule est necessaire dans le resultat, place la formule comme string.\n"
-        "- Evite les erreurs de formule: pas de division par zero, references correctes.\n"
+        "- Use Excel formulas (e.g., '=SUM(A1:A10)') instead of hardcoded calculated values.\n"
+        "- Place calculations in formulas, never Python calculated values.\n"
+        "- No file read/write (I/O) in this code.\n"
+        "- If Excel export requested: put result in 'result' (DataFrame or value).\n"
+        "- If a formula is needed in the result, place the formula as a string.\n"
+        "- Avoid formula errors: no division by zero, correct references.\n"
     )
 
 
@@ -391,53 +391,53 @@ def build_prompt_with_memory(
     detected_skills: Optional[List[str]] = None
 ) -> str:
     """
-    Construit un prompt enrichi avec contexte memoire et niveau utilisateur.
+    Builds an enriched prompt with memory context and user level.
     
     Args:
-        df: DataFrame a analyser
-        question: Question de l'utilisateur
-        memory_context: Contexte des echanges precedents (depuis SessionMemory)
-        available_sheets: Liste des feuilles Excel disponibles
-        user_level: Niveau utilisateur ('beginner' ou 'expert')
-        detected_skills: Liste des skills detectes dans la question
+        df: DataFrame to analyze
+        question: User's question
+        memory_context: Context of previous exchanges (from SessionMemory)
+        available_sheets: List of available Excel sheets
+        user_level: User level ('beginner' or 'expert')
+        detected_skills: List of skills detected in the question
     
     Returns:
-        Prompt complet pour le LLM
+        Complete prompt for the LLM
     """
-    # Construction du contexte enrichi
+    # Build enriched context
     context_parts = []
     
     if memory_context:
-        context_parts.append(f"### CONTEXTE DE LA CONVERSATION ###\n{memory_context}\n")
+        context_parts.append(f"### CONVERSATION CONTEXT ###\n{memory_context}\n")
     
     if detected_skills:
         skills_str = ", ".join(detected_skills)
-        context_parts.append(f"### COMPETENCES DETECTEES ###\nSkills utilises : {skills_str}\n")
+        context_parts.append(f"### DETECTED SKILLS ###\nSkills used: {skills_str}\n")
     
     full_context = "\n".join(context_parts)
     
-    # Adapter les instructions selon le niveau
+    # Adapt instructions based on level
     if user_level == 'beginner':
-        # Mode debutant : instructions plus detaillees
+        # Beginner mode: more detailed instructions
         additional_instructions = (
             "\n"
-            " MODE DEBUTANT - Instructions detaillees :\n"
-            "- Genere un code simple et lisible\n"
-            "- Ajoute des commentaires explicatifs\n"
-            "- Privilegie les operations basiques\n"
-            "- Evite les one-liners complexes\n"
+            " BEGINNER MODE - Detailed instructions:\n"
+            "- Generate simple and readable code\n"
+            "- Add explanatory comments\n"
+            "- Prioritize basic operations\n"
+            "- Avoid complex one-liners\n"
         )
     else:
         additional_instructions = ""
     
-    # Utiliser le build_prompt standard avec le contexte enrichi
+    # Use standard build_prompt with enriched context
     base_prompt = build_prompt(df, question, context=full_context, available_sheets=available_sheets)
     
-    # Injecter les instructions de niveau
+    # Inject level instructions
     if additional_instructions:
         base_prompt = base_prompt.replace(
-            " REGLES OBLIGATOIRES:",
-            f"{additional_instructions}\n REGLES OBLIGATOIRES:"
+            " MANDATORY RULES:",
+            f"{additional_instructions}\n MANDATORY RULES:"
         )
     
     return base_prompt
@@ -451,34 +451,34 @@ def build_followup_prompt(
     business_context: Optional[str] = None
 ) -> str:
     """
-    Construit un prompt pour une question de suivi basee sur un resultat precedent.
+    Builds a prompt for a follow-up question based on a previous result.
     
     Args:
-        df: DataFrame original
-        original_question: Question initiale
-        original_result: Resultat de la question initiale
-        followup_question: Question de suivi
+        df: Original DataFrame
+        original_question: Initial question
+        original_result: Result of the initial question
+        followup_question: Follow-up question
     
     Returns:
-        Prompt pour la question de suivi
+        Prompt for the follow-up question
     """
-    # Resume du resultat precedent
+    # Summary of previous result
     if isinstance(original_result, pd.DataFrame):
-        result_summary = f"DataFrame avec {len(original_result)} lignes, colonnes: {', '.join(original_result.columns[:5])}"
+        result_summary = f"DataFrame with {len(original_result)} rows, columns: {', '.join(original_result.columns[:5])}"
         result_preview = original_result.head(3).to_string(index=False)
     else:
         result_summary = str(original_result)[:200]
         result_preview = str(original_result)[:500]
     
     prompt = (
-        "### CONTEXTE DE SUIVI ###\n"
-        f"Question precedente : {original_question}\n"
-        f"Resultat precedent ({result_summary}) :\n"
+        "### FOLLOW-UP CONTEXT ###\n"
+        f"Previous question: {original_question}\n"
+        f"Previous result ({result_summary}):\n"
         f"{result_preview}\n\n"
-        "### NOUVELLE QUESTION ###\n"
-        f"L'utilisateur pose maintenant : {followup_question}\n\n"
-        "Genere du code pour repondre a cette question de suivi en utilisant le DataFrame 'df' original.\n"
-        "Si tu dois reutiliser le resultat precedent, execute d'abord le code pour l'obtenir.\n\n"
+        "### NEW QUESTION ###\n"
+        f"The user now asks: {followup_question}\n\n"
+        "Generate code to answer this follow-up question using the original DataFrame 'df'.\n"
+        "If you need to reuse the previous result, first execute the code to obtain it.\n\n"
     )
     
     return build_prompt(df, followup_question, context=prompt, business_context=business_context)

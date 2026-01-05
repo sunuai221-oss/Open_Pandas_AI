@@ -1,5 +1,5 @@
 """
-Tests d'intégration pour les composants frontend de Open Pandas-AI.
+Integration tests for Open Pandas-AI frontend components.
 """
 
 import pytest
@@ -7,43 +7,43 @@ import pandas as pd
 import sys
 import os
 
-# Ajouter le répertoire parent au path pour les imports
+# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestSessionManager:
-    """Tests pour le gestionnaire de session."""
+    """Tests for session manager."""
     
     def test_session_manager_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.session_manager import SessionManager, get_session_manager
         assert SessionManager is not None
         assert get_session_manager is not None
     
     def test_session_manager_defaults(self):
-        """Vérifie les valeurs par défaut."""
+        """Verifies default values."""
         from core.session_manager import SessionManager
-        # Note: Ce test nécessite un contexte Streamlit pour fonctionner pleinement
-        # Ici on vérifie simplement que la classe existe
+        # Note: This test requires a Streamlit context to function fully
+        # Here we simply verify that the class exists
         assert hasattr(SessionManager, 'KEYS')
 
 
 class TestSuggestions:
-    """Tests pour le module de suggestions."""
+    """Tests for suggestions module."""
     
     def test_smart_suggestions_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.suggestions import SmartSuggestions, get_suggestions
         assert SmartSuggestions is not None
         assert get_suggestions is not None
     
     def test_suggestions_with_dataframe(self):
-        """Teste la génération de suggestions avec un DataFrame."""
+        """Tests suggestion generation with a DataFrame."""
         from core.suggestions import SmartSuggestions
         
         df = pd.DataFrame({
-            'ventes': [100, 200, 150, 300],
-            'region': ['Nord', 'Sud', 'Est', 'Ouest'],
+            'sales': [100, 200, 150, 300],
+            'region': ['North', 'South', 'East', 'West'],
             'date': pd.date_range('2024-01-01', periods=4)
         })
         
@@ -53,17 +53,17 @@ class TestSuggestions:
         assert isinstance(suggestions, list)
         assert len(suggestions) <= 5
         
-        # Vérifier la structure
+        # Verify structure
         if suggestions:
             for s in suggestions:
                 assert 'text' in s
                 assert 'type' in s
     
     def test_domain_detection(self):
-        """Teste la détection de domaine."""
+        """Tests domain detection."""
         from core.suggestions import SmartSuggestions
         
-        # DataFrame avec colonnes de ventes
+        # DataFrame with sales columns
         df_sales = pd.DataFrame({
             'sales': [100, 200],
             'product': ['A', 'B'],
@@ -74,7 +74,7 @@ class TestSuggestions:
         domain = suggester.detect_domain()
         assert domain == 'sales'
         
-        # DataFrame avec colonnes RH
+        # DataFrame with HR columns
         df_hr = pd.DataFrame({
             'employee': ['John', 'Jane'],
             'salary': [50000, 60000],
@@ -87,16 +87,16 @@ class TestSuggestions:
 
 
 class TestMemory:
-    """Tests pour le module de mémoire."""
+    """Tests for memory module."""
     
     def test_memory_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.memory import SessionMemory, get_memory
         assert SessionMemory is not None
         assert get_memory is not None
     
     def test_memory_methods_exist(self):
-        """Vérifie que les méthodes attendues existent."""
+        """Verifies that expected methods exist."""
         from core.memory import SessionMemory
         
         methods = [
@@ -106,14 +106,14 @@ class TestMemory:
         ]
         
         for method in methods:
-            assert hasattr(SessionMemory, method), f"Méthode {method} manquante"
+            assert hasattr(SessionMemory, method), f"Method {method} missing"
 
 
 class TestPromptBuilder:
-    """Tests pour le constructeur de prompts."""
+    """Tests for prompt builder."""
     
     def test_prompt_builder_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.prompt_builder import (
             build_prompt, detect_excel_intention,
             build_prompt_with_memory, detect_intent
@@ -124,39 +124,39 @@ class TestPromptBuilder:
         assert detect_intent is not None
     
     def test_excel_intention_detection(self):
-        """Teste la détection d'intentions Excel."""
+        """Tests Excel intention detection."""
         from core.prompt_builder import detect_excel_intention
         
         # Pivot table
-        result = detect_excel_intention("créer un tableau croisé dynamique")
+        result = detect_excel_intention("create a pivot table")
         assert result['pivot_table'] == True
         
         # Export
-        result = detect_excel_intention("exporter en Excel")
+        result = detect_excel_intention("export to Excel")
         assert result['export_excel'] == True
         
         # Groupby
-        result = detect_excel_intention("grouper par région")
+        result = detect_excel_intention("group by region")
         assert result['groupby'] == True
     
     def test_intent_detection(self):
-        """Teste la détection d'intentions générales."""
+        """Tests general intention detection."""
         from core.prompt_builder import detect_intent
         
-        # Visualisation
-        result = detect_intent("génère un graphique des ventes")
+        # Visualization
+        result = detect_intent("generate a sales chart")
         assert result['visualization'] == True
         
-        # Statistiques
-        result = detect_intent("calcule la moyenne et la médiane")
+        # Statistics
+        result = detect_intent("calculate mean and median")
         assert result['statistics'] == True
         
-        # Filtrage
-        result = detect_intent("filtre les ventes supérieures à 1000")
+        # Filtering
+        result = detect_intent("filter sales above 1000")
         assert result['filtering'] == True
     
     def test_build_prompt_structure(self):
-        """Teste la structure du prompt généré."""
+        """Tests generated prompt structure."""
         from core.prompt_builder import build_prompt
         
         df = pd.DataFrame({
@@ -164,20 +164,20 @@ class TestPromptBuilder:
             'col2': ['a', 'b', 'c']
         })
         
-        prompt = build_prompt(df, "question test")
+        prompt = build_prompt(df, "test question")
         
-        # Vérifier les éléments clés
+        # Verify key elements
         assert "expert Python" in prompt
         assert "<startCode>" in prompt
         assert "<endCode>" in prompt
-        assert "Colonnes" in prompt
+        assert "Columns" in prompt
 
 
 class TestQueries:
-    """Tests pour les requêtes DB."""
+    """Tests for DB queries."""
     
     def test_queries_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from db.queries import (
             get_user_by_username, get_recent_files,
             get_recent_questions, search_questions,
@@ -191,10 +191,10 @@ class TestQueries:
 
 
 class TestExcelUtils:
-    """Tests pour les utilitaires Excel."""
+    """Tests for Excel utilities."""
     
     def test_excel_utils_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.excel_utils import (
             detect_excel_sheets, read_excel_multi_sheets,
             export_dataframe_to_buffer, create_pivot_table,
@@ -206,20 +206,20 @@ class TestExcelUtils:
         assert create_pivot_table is not None
     
     def test_pivot_table_creation(self):
-        """Teste la création de pivot tables."""
+        """Tests pivot table creation."""
         from core.excel_utils import create_pivot_table
         
         df = pd.DataFrame({
-            'region': ['Nord', 'Nord', 'Sud', 'Sud'],
-            'produit': ['A', 'B', 'A', 'B'],
-            'ventes': [100, 200, 150, 250]
+            'region': ['North', 'North', 'South', 'South'],
+            'product': ['A', 'B', 'A', 'B'],
+            'sales': [100, 200, 150, 250]
         })
         
         pivot = create_pivot_table(
             df,
-            values='ventes',
+            values='sales',
             index='region',
-            columns='produit',
+            columns='product',
             aggfunc='sum'
         )
         
@@ -227,7 +227,7 @@ class TestExcelUtils:
         assert len(pivot) > 0
     
     def test_export_to_buffer(self):
-        """Teste l'export vers un buffer."""
+        """Tests export to buffer."""
         from core.excel_utils import export_dataframe_to_buffer
         from io import BytesIO
         
@@ -239,32 +239,32 @@ class TestExcelUtils:
         buffer = export_dataframe_to_buffer(df)
         
         assert isinstance(buffer, BytesIO)
-        assert buffer.getvalue()  # Non vide
+        assert buffer.getvalue()  # Not empty
     
     def test_should_export_detection(self):
-        """Teste la détection d'intention d'export."""
+        """Tests export intention detection."""
         from core.excel_utils import should_export_to_excel
         
         df = pd.DataFrame({'col': [1, 2, 3]})
         
-        # Devrait détecter l'intention d'export
-        assert should_export_to_excel("exporter en Excel", "", df) == True
-        assert should_export_to_excel("télécharger les résultats", "", df) == True
+        # Should detect export intention
+        assert should_export_to_excel("export to Excel", "", df) == True
+        assert should_export_to_excel("download results", "", df) == True
         
-        # Ne devrait pas détecter
-        assert should_export_to_excel("calculer la moyenne", "", df) == False
+        # Should not detect
+        assert should_export_to_excel("calculate mean", "", df) == False
 
 
 class TestDataValidator:
-    """Tests pour le validateur de données."""
+    """Tests for data validator."""
     
     def test_validator_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from core.data_validator import DataValidator
         assert DataValidator is not None
     
     def test_validation_result_structure(self):
-        """Teste la structure du résultat de validation."""
+        """Tests validation result structure."""
         from core.data_validator import DataValidator
         
         df = pd.DataFrame({
@@ -282,69 +282,69 @@ class TestDataValidator:
 
 
 class TestSkillsCatalog:
-    """Tests pour le catalogue de skills."""
+    """Tests for skills catalog."""
     
     def test_skills_catalog_import(self):
-        """Vérifie que le module s'importe correctement."""
+        """Verifies that the module imports correctly."""
         from components.skills_catalog import SKILLS, detect_skill_from_question
         assert SKILLS is not None
         assert detect_skill_from_question is not None
     
     def test_skills_structure(self):
-        """Vérifie la structure des skills."""
+        """Verifies skills structure."""
         from components.skills_catalog import SKILLS
         
         required_keys = ['id', 'name', 'icon', 'description', 'keywords', 'example']
         
         for skill in SKILLS:
             for key in required_keys:
-                assert key in skill, f"Clé {key} manquante dans skill {skill.get('id')}"
+                assert key in skill, f"Key {key} missing in skill {skill.get('id')}"
     
     def test_skill_detection(self):
-        """Teste la détection de skills depuis une question."""
+        """Tests skill detection from a question."""
         from components.skills_catalog import detect_skill_from_question
         
         # Pivot
-        skills = detect_skill_from_question("créer un pivot des ventes")
+        skills = detect_skill_from_question("create a sales pivot")
         skill_ids = [s['id'] for s in skills]
         assert 'pivot' in skill_ids
         
-        # Visualisation
-        skills = detect_skill_from_question("génère un graphique")
+        # Visualization
+        skills = detect_skill_from_question("generate a chart")
         skill_ids = [s['id'] for s in skills]
         assert 'viz' in skill_ids
 
 
-# Tests de régression
+# Regression tests
 class TestRegression:
-    """Tests de régression pour éviter les bugs connus."""
+    """Regression tests to avoid known bugs."""
     
     def test_empty_dataframe_handling(self):
-        """Teste le comportement avec un DataFrame vide."""
+        """Tests behavior with an empty DataFrame."""
         from core.suggestions import SmartSuggestions
         
         df = pd.DataFrame()
         suggester = SmartSuggestions(df=df)
         suggestions = suggester.generate()
         
-        # Ne devrait pas planter
+        # Should not crash
         assert isinstance(suggestions, list)
     
     def test_special_characters_in_questions(self):
-        """Teste les caractères spéciaux dans les questions."""
+        """Tests special characters in questions."""
         from core.prompt_builder import build_prompt
         
         df = pd.DataFrame({'col': [1, 2]})
         
         questions = [
-            "Quelle est la moyenne ?",
-            "Test avec 'guillemets'",
-            "Test avec \"double guillemets\"",
-            "Test avec <balises>",
+            "What is the mean?",
+            "Test with 'quotes'",
+            "Test with \"double quotes\"",
+            "Test with <tags>",
         ]
         
         for q in questions:
-            # Ne devrait pas planter
+            # Should not crash
             prompt = build_prompt(df, q)
             assert isinstance(prompt, str)
 

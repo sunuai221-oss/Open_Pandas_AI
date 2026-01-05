@@ -96,7 +96,7 @@ with tab_detailed:
         ]
         selected_idx = st.selectbox("Select an analysis", range(len(options)), format_func=lambda i: options[i])
         
-        # Afficher l'analyse sélectionnée
+        # Display selected analysis
         exchange = session.exchanges[selected_idx]
         
         st.markdown(f"### ❓ Question")

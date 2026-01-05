@@ -14,10 +14,10 @@ from core.consulting import auto_comment_agent
 @patch('core.llm.call_llm')
 def test_end_to_end_pipeline_with_mocked_llm(mock_llm_call, mock_consulting_call):
     mock_llm_call.return_value = "result = df['sales'].sum()"
-    mock_consulting_call.return_value = "Analyse synthetique"
+    mock_consulting_call.return_value = "Synthetic analysis"
 
     df = pd.DataFrame({"sales": [10, 20, 30], "country": ["FR", "US", "FR"]})
-    question = "Quelle est la somme des ventes ?"
+    question = "What is the sum of sales?"
 
     prompt = build_prompt(df, question)
     code = llm.call_llm(prompt)
@@ -31,7 +31,7 @@ def test_end_to_end_pipeline_with_mocked_llm(mock_llm_call, mock_consulting_call
     assert formatted == 60
 
     comment = auto_comment_agent(df=df, result=raw_result)
-    assert comment == "Analyse synthetique"
+    assert comment == "Synthetic analysis"
 
     assert mock_llm_call.called
     assert mock_consulting_call.called
