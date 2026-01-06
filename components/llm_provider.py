@@ -10,27 +10,35 @@ from core.session_manager import get_session_manager
 
 
 PROVIDERS = [
-    ("codestral", "Cloud - Codestral"),
-    ("ollama", "Local - Ollama"),
     ("lmstudio", "Local - LM Studio"),
+    ("ollama", "Local - Ollama"),
+    ("codestral", "Cloud - Codestral (requires API key)"),
 ]
+
+# Set OFFLINE_ONLY=true in env to completely hide cloud providers
+_OFFLINE_ONLY = os.getenv("OFFLINE_ONLY", "").lower() in ("1", "true", "yes")
 
 
 def render_llm_provider_selector(title: str = "LLM Provider") -> None:
     session = get_session_manager()
     st.markdown(f"### {title}")
 
-    provider_labels = {key: label for key, label in PROVIDERS}
-    provider_keys = [key for key, _ in PROVIDERS]
+    # Filter providers when OFFLINE_ONLY mode is enabled
+    available_providers = [(k, l) for k, l in PROVIDERS if not (_OFFLINE_ONLY and k == "codestral")]
+    provider_labels = {key: label for key, label in available_providers}
+    provider_keys = [key for key, _ in available_providers]
 
     current_provider = session.llm_provider if session.llm_provider in provider_keys else "lmstudio"
     provider = st.selectbox(
         "Provider",
         options=provider_keys,
-        index=provider_keys.index(current_provider),
+        index=provider_keys.index(current_provider) if current_provider in provider_keys else 0,
         format_func=lambda key: provider_labels.get(key, key),
         key="llm_provider_select",
     )
+
+    if _OFFLINE_ONLY:
+        st.caption("Mode 100% local activé (OFFLINE_ONLY=true)")
 
     if provider != session.llm_provider:
         session.set_llm_provider(provider)

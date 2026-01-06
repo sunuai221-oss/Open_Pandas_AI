@@ -1,9 +1,20 @@
 """
-Business Examples - Exemples métiers prédéfinis pour détection automatique
-Contient 12+ dictionnaires de domaines différents (E-commerce, CRM, RH, Finance, etc.)
+Business Examples - Exemples métiers prédéfinis pour détection automatique.
+
+v2 (retrocompatible):
+- Ajout de champs OPTIONNELS (typical_questions, common_metrics, recommended_charts, column_synonyms, quality_rules, business_intents)
+- Ajout d'utilitaires (normalize_column_name, match_business_examples, get_domain_assets)
+
+Important: ne casse pas l'API existante:
+- get_business_example(key)
+- get_all_business_examples()
 """
 
-from typing import Dict, Any
+from __future__ import annotations
+
+from typing import Dict, Any, List, Tuple
+
+import re
 
 # ============================================
 # 1. E-COMMERCE EXAMPLES
@@ -58,6 +69,20 @@ ECOMMERCE_CUSTOMERS = {
             "examples": ["active", "suspended"]
         }
     }
+    ,
+    # v2 optional assets
+    "typical_questions": [
+        "Quels sont les pays avec le plus de clients actifs ?",
+        "Quel est le taux de clients inactifs/suspendus ?",
+    ],
+    "common_metrics": ["customer_count", "active_customer_pct"],
+    "recommended_charts": ["bar", "pie"],
+    "column_synonyms": {
+        "customer_id": ["id_client", "client_id", "customerid", "idcustomer"],
+        "subscription_date": ["date_inscription", "signup_date", "date_adhesion"],
+        "country": ["pays", "country_code"],
+        "status": ["etat", "statut"],
+    },
 }
 
 ECOMMERCE_PRODUCTS = {
@@ -154,6 +179,20 @@ ECOMMERCE_ORDERS = {
             "examples": ["delivered", "cancelled"]
         }
     }
+    ,
+    "typical_questions": [
+        "Quel est le chiffre d'affaires par mois ?",
+        "Top 10 clients par montant total de commandes",
+    ],
+    "common_metrics": ["total_revenue", "avg_order_value", "order_count"],
+    "recommended_charts": ["line", "bar"],
+    "column_synonyms": {
+        "order_id": ["commande", "numero_commande", "order", "id_commande"],
+        "order_date": ["date_commande", "date_order", "created_at"],
+        "amount": ["montant", "total", "revenue", "ca"],
+        "customer_id": ["id_client", "client_id"],
+        "status": ["etat", "statut_commande"],
+    },
 }
 
 # ============================================
@@ -210,6 +249,20 @@ CRM_LEADS = {
             "examples": ["2024-01-10T10:00:00Z"]
         }
     }
+    ,
+    "typical_questions": [
+        "Quelle est la repartition des leads par source et stage ?",
+        "Combien de leads par mois ?",
+    ],
+    "common_metrics": ["lead_count", "conversion_rate"],
+    "recommended_charts": ["bar", "line"],
+    "column_synonyms": {
+        "lead_id": ["id_lead", "prospect_id"],
+        "created_date": ["date_creation", "created_at"],
+        "stage": ["etape", "pipeline_stage"],
+        "source": ["origine", "acquisition_source"],
+        "company": ["entreprise", "societe"],
+    },
 }
 
 CRM_ACCOUNTS = {
@@ -315,6 +368,21 @@ HR_EMPLOYEES = {
             "examples": ["active", "terminated"]
         }
     }
+    ,
+    "typical_questions": [
+        "Quel est le salaire moyen par departement ?",
+        "Quelle est l'anciennete moyenne par departement ?",
+    ],
+    "common_metrics": ["headcount", "avg_salary", "median_salary", "avg_tenure_years"],
+    "recommended_charts": ["bar", "box"],
+    "column_synonyms": {
+        "employee_id": ["id_employe", "matricule", "emp_id"],
+        "department": ["departement", "service"],
+        "job_title": ["poste", "intitule_poste"],
+        "hire_date": ["date_embauche", "date_entree"],
+        "salary": ["salaire", "remuneration", "compensation"],
+        "status": ["statut", "etat"],
+    },
 }
 
 # ============================================
@@ -363,6 +431,20 @@ FINANCE_TRANSACTIONS = {
             "examples": ["Bank-001", "ACC-USD"]
         }
     }
+    ,
+    "typical_questions": [
+        "Quel est le total des montants par categorie et par mois ?",
+        "Quelles sont les plus grosses transactions (valeur absolue) ?",
+    ],
+    "common_metrics": ["total_amount", "net_amount", "expense_by_category"],
+    "recommended_charts": ["bar", "line"],
+    "column_synonyms": {
+        "transaction_id": ["id_transaction", "txn_id"],
+        "date": ["transaction_date", "date_transaction"],
+        "amount": ["montant", "valeur"],
+        "category": ["categorie", "type"],
+        "account": ["compte", "account_name"],
+    },
 }
 
 # ============================================
@@ -467,3 +549,99 @@ def list_available_examples() -> Dict[str, list]:
             "description": example.get("description")
         })
     return domains
+
+
+def normalize_column_name(col: str) -> str:
+    """
+    Normalize a column name for matching:
+    - lowercase
+    - remove accents (unicode NFKD decomposition)
+    - replace spaces and separators with underscores
+    """
+    import unicodedata
+    if col is None:
+        return ""
+    col = str(col).strip().lower()
+    # Remove accents: decompose then drop combining marks
+    col = unicodedata.normalize("NFKD", col)
+    col = "".join(c for c in col if not unicodedata.combining(c))
+    col = re.sub(r"[^\w]+", "_", col, flags=re.UNICODE)
+    col = re.sub(r"_+", "_", col).strip("_")
+    return col
+
+
+def match_business_example(df_columns: List[str], examples: Dict[str, Dict[str, Any]] | None = None) -> List[Tuple[str, float]]:
+    """Alias for match_business_examples (backward-compat)."""
+    return match_business_examples(df_columns, examples)
+
+
+def match_business_examples(df_columns: List[str], examples: Dict[str, Dict[str, Any]] | None = None) -> List[Tuple[str, float]]:
+    """
+    Score examples against df columns (normalized).
+    Returns a list of (example_key, score) sorted by score desc.
+    """
+    examples = examples or BUSINESS_EXAMPLES
+    cols = {normalize_column_name(c) for c in df_columns}
+
+    scored: List[Tuple[str, float]] = []
+    for key, example in examples.items():
+        ex_cols = {normalize_column_name(c) for c in (example.get("columns") or {}).keys()}
+        if not ex_cols:
+            continue
+        matches = len(cols & ex_cols)
+        score = matches / len(ex_cols) if ex_cols else 0.0
+
+        # bonus for synonyms if provided (v2)
+        synonyms: Dict[str, List[str]] = example.get("column_synonyms") or {}
+        if synonyms:
+            syn_hits = 0
+            for canonical, syns in synonyms.items():
+                canonical_norm = normalize_column_name(canonical)
+                all_terms = {canonical_norm} | {normalize_column_name(s) for s in syns}
+                if cols.intersection(all_terms):
+                    syn_hits += 1
+            score = max(score, min(0.85, syn_hits / max(3, len(synonyms))))
+
+        scored.append((key, float(score)))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored
+
+
+def get_domain_assets(domain: str) -> Dict[str, Any]:
+    """
+    Aggregate optional v2 assets by domain.
+    Useful for agent prompts / UI suggestions.
+    """
+    domain = (domain or "").lower()
+    assets: Dict[str, Any] = {
+        "typical_questions": [],
+        "common_metrics": [],
+        "recommended_charts": [],
+        "quality_rules": [],
+        "business_intents": {},
+    }
+    for _key, example in BUSINESS_EXAMPLES.items():
+        if (example.get("domain") or "").lower() != domain:
+            continue
+        for k in ("typical_questions", "common_metrics", "recommended_charts", "quality_rules"):
+            items = example.get(k) or []
+            if isinstance(items, list):
+                assets[k].extend(items)
+        intents = example.get("business_intents") or {}
+        if isinstance(intents, dict):
+            assets["business_intents"].update(intents)
+
+    # dedupe lists while preserving order
+    for k in ("typical_questions", "common_metrics", "recommended_charts", "quality_rules"):
+        seen = set()
+        deduped = []
+        for item in assets[k]:
+            marker = str(item)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            deduped.append(item)
+        assets[k] = deduped
+
+    return assets

@@ -41,6 +41,11 @@ class SessionManager:
         'llm_model': 'llm_model',
         'business_domain': 'business_domain',
         'business_example_key': 'business_example_key',
+        # Agent orchestration (new)
+        'selected_agent_mode': 'selected_agent_mode',  # "auto"|"finance"|"hr"|"crm"|"ecommerce"|...
+        'detected_agent': 'detected_agent',
+        'detection_confidence': 'detection_confidence',
+        'detection_reasons': 'detection_reasons',
     }
     
     def __init__(self):
@@ -73,6 +78,11 @@ class SessionManager:
             'llm_model': 'codestral-latest',
             'business_domain': 'auto',
             'business_example_key': None,
+            # Agent orchestration (new)
+            'selected_agent_mode': 'auto',
+            'detected_agent': None,
+            'detection_confidence': 0.0,
+            'detection_reasons': [],
         }
         
         for key, default_value in defaults.items():
@@ -161,6 +171,22 @@ class SessionManager:
     @property
     def business_example_key(self) -> Optional[str]:
         return st.session_state.get('business_example_key')
+
+    @property
+    def selected_agent_mode(self) -> str:
+        return st.session_state.get('selected_agent_mode', 'auto')
+
+    @property
+    def detected_agent(self) -> Optional[str]:
+        return st.session_state.get('detected_agent')
+
+    @property
+    def detection_confidence(self) -> float:
+        return float(st.session_state.get('detection_confidence', 0.0) or 0.0)
+
+    @property
+    def detection_reasons(self) -> List[str]:
+        return st.session_state.get('detection_reasons', []) or []
     
     # ============ SETTERS ============
     
@@ -218,6 +244,16 @@ class SessionManager:
     def set_business_example_key(self, key: Optional[str]):
         """Définit l'exemple métier sélectionné."""
         st.session_state['business_example_key'] = key
+
+    def set_selected_agent_mode(self, mode: str):
+        """Définit le mode agent: auto | finance | hr | crm | ecommerce | generic"""
+        st.session_state['selected_agent_mode'] = (mode or 'auto').lower()
+
+    def set_agent_detection(self, detected_agent: Optional[str], confidence: float = 0.0, reasons: Optional[List[str]] = None):
+        """Stocke la detection d'agent (si mode auto)."""
+        st.session_state['detected_agent'] = detected_agent
+        st.session_state['detection_confidence'] = float(confidence or 0.0)
+        st.session_state['detection_reasons'] = reasons or []
     
     def set_validation_result(self, result: Dict, score: float):
         """Définit le résultat de validation."""

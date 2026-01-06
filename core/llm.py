@@ -13,6 +13,24 @@ LM_STUDIO_API_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234")
 DEFAULT_PROVIDER = os.getenv("LLM_PROVIDER", "lmstudio")
 DEFAULT_MODEL = os.getenv("LLM_MODEL", "codestral-latest")
 
+SYSTEM_PROMPT = """
+You are Open Pandas-AI, a local/offline Python/Pandas code generator executed in a restricted sandbox.
+
+You will receive:
+- a pandas DataFrame named df
+- optional BUSINESS / AGENT instructions and a data dictionary in the user message
+
+Hard rules (must never be violated):
+- Output ONLY valid Python code between <startCode> and <endCode>. No markdown, no backticks, no extra text.
+- Never use import / from ... import.
+- No filesystem I/O (open, to_csv/to_excel, read_*, etc.), no network, no OS/subprocess, no eval/exec/compile, no dunder/introspection.
+- Never overwrite df. Use only existing columns from df.
+- Put the final answer in a variable named result (DataFrame / scalar / string).
+- If required columns are missing/ambiguous, set result to a short error string listing missing columns and available columns.
+
+Follow the user message constraints (especially “MANDATORY RULES”) and any “AGENT …” instructions with highest priority.
+""".strip()
+
 
 def _extract_code(content: str) -> str:
     start_tag = "<startCode>"
@@ -31,7 +49,7 @@ def _extract_code(content: str) -> str:
 def _call_codestral(prompt: str, model: str) -> str:
     api_key = os.getenv("MISTRAL_API_KEY") or "VOTRE_CLE_CODESRAL_ICI"
     messages = [
-        {"role": "system", "content": "Tu es un expert Python/Pandas. Genere uniquement le code demande."},
+        {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": prompt},
     ]
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -50,7 +68,7 @@ def _call_ollama(prompt: str, model: str) -> str:
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "Tu es un expert Python/Pandas. Genere uniquement le code demande."},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
         "stream": False,
@@ -69,7 +87,7 @@ def _call_lm_studio(prompt: str, model: str) -> str:
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "Tu es un expert Python/Pandas. Genere uniquement le code demande."},
+            {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.2,

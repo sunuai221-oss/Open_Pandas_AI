@@ -33,7 +33,7 @@ def detect_excel_intention(question: str) -> Dict[str, bool]:
             'concatener', 'concatener', 'concat'
         ]),
         'groupby': any(kw in question_lower for kw in [
-            'grouper', 'regrouper', 'par groupe', 'group by', 'groupby'
+            'grouper', 'regrouper', 'par groupe', 'group by', 'groupby', 'group data by'
         ])
     }
 
@@ -199,14 +199,14 @@ def build_prompt(
     # === FINAL PROMPT CONSTRUCTION ===
     prompt = (
         f"{context_part}"
-        f"You are a Python, Pandas and data analysis expert.\n"
+        f"You are an expert Python, Pandas and data analysis expert.\n"
         f"{user_context}"
         f"{skills_info}"
         f"\n"
         f" DATA TO ANALYZE:\n"
         f"The DataFrame 'df' contains **{n_rows:,} rows** and **{len(df.columns)} columns**.\n"
         f"\nPreview of the first 5 rows:\n{preview}\n\n"
-        f" Available columns:\n{columns}\n\n"
+        f" Available Columns:\n{columns}\n\n"
         f" Column types:\n{type_analysis}\n\n"
         f"{unique_str_part}"
         f"{dictionary_context}"
@@ -250,9 +250,91 @@ def build_prompt(
     return prompt
 
 
+def _format_agent_plan(plan: Dict[str, Any]) -> str:
+    """
+    Render an agent plan (dict) to a readable text block.
+    We keep it simple to avoid making the prompt too large.
+    """
+    if not plan:
+        return ""
+    lines = []
+    for k, v in plan.items():
+        if isinstance(v, (list, tuple)):
+            preview = ", ".join(str(x) for x in v[:8])
+            suffix = "..." if len(v) > 8 else ""
+            lines.append(f"- {k}: {preview}{suffix}")
+        elif isinstance(v, dict):
+            # one-level preview
+            items = list(v.items())[:8]
+            preview = ", ".join(f"{ik}={iv}" for ik, iv in items)
+            suffix = "..." if len(v) > 8 else ""
+            lines.append(f"- {k}: {preview}{suffix}")
+        else:
+            lines.append(f"- {k}: {v}")
+    return "\n".join(lines)
+
+
+def build_prompt_with_agent(
+    df: pd.DataFrame,
+    question: str,
+    context: str = "",
+    available_sheets: Optional[List[str]] = None,
+    user_level: str = "expert",
+    detected_skills: Optional[List[str]] = None,
+    data_dictionary: Optional[Dict[str, Any]] = None,
+    business_context: Optional[str] = None,
+    agent_prompt: str = "",
+    agent_plan: Optional[Dict[str, Any]] = None,
+    domain_assets: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Orchestrate prompt by injecting AGENT context above the existing build_prompt().
+    Keeps build_prompt() intact for retrocompatibility.
+    """
+    agent_section_parts: List[str] = []
+    if agent_prompt:
+        agent_section_parts.append("### AGENT INSTRUCTIONS ###\n" + agent_prompt.strip())
+    if agent_plan:
+        rendered = _format_agent_plan(agent_plan)
+        if rendered:
+            agent_section_parts.append("### ANALYSIS PLAN ###\n" + rendered)
+    if domain_assets:
+        # keep minimal, just high-signal assets
+        tq = domain_assets.get("typical_questions") or []
+        cm = domain_assets.get("common_metrics") or []
+        rc = domain_assets.get("recommended_charts") or []
+        assets_lines = []
+        if tq:
+            assets_lines.append("Typical questions: " + "; ".join(str(x) for x in tq[:5]))
+        if cm:
+            assets_lines.append("Common metrics: " + ", ".join(str(x) for x in cm[:8]))
+        if rc:
+            assets_lines.append("Recommended charts: " + ", ".join(str(x) for x in rc[:6]))
+        if assets_lines:
+            agent_section_parts.append("### DOMAIN ASSETS ###\n" + "\n".join(assets_lines))
+
+    agent_section = ""
+    if agent_section_parts:
+        agent_section = "\n\n" + "\n\n".join(agent_section_parts) + "\n\n"
+
+    enriched_context = (context or "") + agent_section
+    return build_prompt(
+        df=df,
+        question=question,
+        context=enriched_context,
+        available_sheets=available_sheets,
+        user_level=user_level,
+        detected_skills=detected_skills,
+        data_dictionary=data_dictionary,
+        business_context=business_context,
+    )
+
+
 def _sanitize_ascii(text: str) -> str:
-    """Best-effort ASCII cleanup for prompt text."""
-    return text.encode('ascii', 'ignore').decode('ascii')
+    """Best-effort prompt cleanup without dropping non-ASCII characters."""
+    if not text:
+        return ""
+    return text.replace("\x00", "")
 
 
 def _analyze_column_types(df: pd.DataFrame) -> str:
@@ -361,25 +443,6 @@ def build_pivot_table_prompt(
     
     prompt = _sanitize_ascii(prompt)
     return prompt
-
-
-def build_xlsx_skill_instructions(intentions: Dict[str, bool]) -> str:
-    """
-    Adds rules for Excel requests to avoid formula errors
-    and keep workbooks dynamic.
-    """
-    if not any(intentions.values()):
-        return ""
-
-    return (
-        "\n\nXLSX RULES (LLM QUALITY):\n"
-        "- Use Excel formulas (e.g., '=SUM(A1:A10)') instead of hardcoded calculated values.\n"
-        "- Place calculations in formulas, never Python calculated values.\n"
-        "- No file read/write (I/O) in this code.\n"
-        "- If Excel export requested: put result in 'result' (DataFrame or value).\n"
-        "- If a formula is needed in the result, place the formula as a string.\n"
-        "- Avoid formula errors: no division by zero, correct references.\n"
-    )
 
 
 def build_prompt_with_memory(
@@ -504,8 +567,8 @@ def detect_intent(question: str) -> Dict[str, Any]:
             'plot', 'courbe', 'histogramme', 'camembert', 'bar'
         ]),
         'statistics': any(kw in question_lower for kw in [
-            'moyenne', 'mediane', 'mediane', 'ecart-type', 'ecart-type',
-            'statistique', 'stats', 'distribution', 'correlation', 'correlation'
+            'moyenne', 'mediane', 'ecart-type', 'statistique', 'stats', 'distribution', 'correlation',
+            'mean', 'median', 'average', 'avg', 'std', 'stdev', 'variance'
         ]),
         'filtering': any(kw in question_lower for kw in [
             'filtrer', 'filter', 'selectionner', 'selectionner', 'ou', 'ou',

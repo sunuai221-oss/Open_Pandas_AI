@@ -6,7 +6,7 @@ Essaie de matcher avec les exemples métiers, sinon détection automatique
 from typing import Dict, Tuple, Optional, Any
 import pandas as pd
 from difflib import SequenceMatcher
-from core.business_examples import get_all_business_examples
+from core.business_examples import get_all_business_examples, normalize_column_name
 
 
 class SmartDictionaryDetector:
@@ -30,7 +30,7 @@ class SmartDictionaryDetector:
             - confidence: Score de confiance 0-1
         """
         # Analyser les colonnes
-        df_columns = set(col.lower().replace(' ', '_') for col in df.columns)
+        df_columns = set(normalize_column_name(col) for col in df.columns)
         df_column_info = cls._analyze_columns(df)
         
         # Chercher les matches
@@ -40,7 +40,7 @@ class SmartDictionaryDetector:
         
         for example_key, example in get_all_business_examples().items():
             columns = example.get("columns", {})
-            example_columns = set(columns.keys())
+            example_columns = {normalize_column_name(c) for c in columns.keys()}
             
             # Calculer la similarité
             score = cls._calculate_similarity(df_columns, example_columns)
@@ -67,7 +67,8 @@ class SmartDictionaryDetector:
         
         for col in df.columns:
             col_data = df[col].dropna()
-            col_lower = col.lower()
+            col_lower = str(col).lower()
+            col_clean = normalize_column_name(col)
             
             # Déterminer le type plus précisément
             is_numeric = pd.api.types.is_numeric_dtype(df[col])
@@ -90,7 +91,7 @@ class SmartDictionaryDetector:
             
             analysis[col] = {
                 'original_name': col,
-                'clean_name': col_lower.replace(' ', '_'),
+                'clean_name': col_clean,
                 'dtype': str(df[col].dtype),
                 'null_count': df[col].isna().sum(),
                 'null_pct': (df[col].isna().sum() / len(df)) * 100,
@@ -148,17 +149,17 @@ class SmartDictionaryDetector:
         }
         
         # Enrichir chaque colonne avec les stats du DataFrame
+        columns = enriched.get('columns', {}) or {}
+        norm_map = {normalize_column_name(k): k for k in columns}
         for col_name, col_info in df_column_info.items():
-            clean_col = col_name.lower().replace(' ', '_')
-            
-            if clean_col in enriched['columns']:
-                # Ajouter les statistiques détectées
-                enriched['columns'][clean_col]['detected_stats'] = {
+            clean_col = normalize_column_name(col_name)
+            dict_key = norm_map.get(clean_col)
+            if dict_key:
+                enriched['columns'][dict_key]['detected_stats'] = {
                     'null_pct': col_info['null_pct'],
                     'unique_count': col_info['unique_count'],
                     'sample_values': col_info['sample_values'],
                 }
-        
         return enriched
     
     @staticmethod

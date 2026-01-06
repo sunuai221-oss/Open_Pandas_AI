@@ -1,3 +1,5 @@
+import numbers
+
 import pandas as pd
 from typing import Any, Dict, Optional, List
 from core.result_validator import ResultValidator
@@ -59,14 +61,21 @@ def format_result_with_validation(
 
 def _format_simple(result: Any) -> Any:
     """Formatage simple sans contexte."""
-    
+
     if isinstance(result, pd.DataFrame):
         return result
+    # Keep numeric scalars (including numpy int/float) as their Python equivalents
+    elif isinstance(result, bool):
+        return result
+    elif isinstance(result, numbers.Integral):
+        # Covers Python int, numpy.int64, etc.
+        return int(result)
+    elif isinstance(result, numbers.Real):
+        # Covers Python float, numpy.float64, etc.
+        return round(float(result), 4)
     elif isinstance(result, (list, tuple)):
         return ', '.join(map(str, result))
     elif result is None:
         return "Aucun résultat à afficher."
-    elif isinstance(result, float):
-        return round(result, 4)
     else:
         return str(result)

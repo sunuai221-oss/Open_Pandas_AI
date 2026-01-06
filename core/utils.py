@@ -88,22 +88,25 @@ def valid_email_percentage(s):
     """Renvoie le pourcentage d’emails valides dans une Series booléenne."""
     return s.mean() * 100
 
+def _mean_age_by_sex(series, sex_value):
+    parent_df = globals().get("df")
+    if parent_df is not None and hasattr(parent_df, "columns") and "Sex" in parent_df.columns:
+        try:
+            mask = parent_df.loc[series.index, "Sex"] == sex_value
+            return series[mask].mean()
+        except Exception:
+            return None
+    if hasattr(series, "columns") and "Sex" in series.columns and "Age" in series.columns:
+        try:
+            return series[series["Sex"] == sex_value]["Age"].mean()
+        except Exception:
+            return None
+    return None
+
 def mean_age_females(s):
-    """Moyenne d’âge pour les femmes dans une Series d’âges, indexant sur df['Sex']"""
-    import pandas as pd
-    df = s.to_frame()
-    if 'Sex' in df.columns:
-        return df[s == 'Female']['Age'].mean()
-    else:
-        # cas classique : index = celui du DataFrame d’origine
-        # il faut que le DataFrame original soit accessible sous 'df'
-        return s[df.loc[s.index, 'Sex'] == 'Female'].mean()
+    """Mean age for female rows when a parent df with Sex is available."""
+    return _mean_age_by_sex(s, "Female")
 
 def mean_age_males(s):
-    """Moyenne d’âge pour les hommes dans une Series d’âges, indexant sur df['Sex']"""
-    import pandas as pd
-    df = s.to_frame()
-    if 'Sex' in df.columns:
-        return df[s == 'Male']['Age'].mean()
-    else:
-        return s[df.loc[s.index, 'Sex'] == 'Male'].mean()
+    """Mean age for male rows when a parent df with Sex is available."""
+    return _mean_age_by_sex(s, "Male")

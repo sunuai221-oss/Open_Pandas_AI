@@ -319,30 +319,3 @@ class ResultValidator:
                 suggestions.append(f"📈 Voir les statistiques de {col}")
         
         return suggestions[:3]  # Max 3 suggestions
-    
-    @staticmethod
-    def _suggest_followups_df(df: pd.DataFrame, question: str) -> List[str]:
-        """Suggère des questions de suivi."""
-        
-        suggestions = []
-        
-        if len(df) > 0:
-            # Suggérer un tri
-            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-            if numeric_cols:
-                col = numeric_cols[0]
-                suggestions.append(f"📊 Trier par {col} (ascendant/descendant)")
-            
-            # Suggérer un groupby si pas déjà fait
-            if 'grouper' not in question.lower() and 'groupe' not in question.lower():
-                cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-                if cat_cols:
-                    col = cat_cols[0]
-                    suggestions.append(f"🔀 Regrouper par {col}")
-            
-            # Suggérer des statistiques
-            if numeric_cols:
-                col = numeric_cols[0]
-                suggestions.append(f"📈 Voir les statistiques de {col}")
-        
-        return suggestions[:3]  # Max 3 suggestions

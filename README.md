@@ -303,6 +303,7 @@ For more security details, see [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md#-securi
 - `OLLAMA_BASE_URL`: Ollama server URL (default: `http://localhost:11434`)
 - `LMSTUDIO_BASE_URL`: LM Studio server URL (default: `http://localhost:1234`)
 - `DATABASE_URL`: PostgreSQL connection string (for persistent storage)
+- `OFFLINE_ONLY`: Set to `true` to hide cloud providers (Codestral) from the UI — enforces 100% local mode
 
 ### UI Settings
 
@@ -391,6 +392,37 @@ The system automatically detects and optimizes for:
 - **Auto-Generation**: Creates dictionary from data if no match found
 - **Manual Enrichment**: UI for adding descriptions, business rules, validation rules
 - **Impact**: Improves LLM response quality by 15-25%
+
+### Business Agents
+
+Open Pandas-AI includes a **domain-aware agents system** that customizes the LLM prompt based on your data type.
+
+**Available agents**:
+| Domain | Agent | Typical tasks |
+|--------|-------|---------------|
+| Finance | FinanceAgent | Transaction analysis, reporting, reconciliation |
+| E-commerce | EcommerceAgent | Sales analysis, AOV, customer segmentation |
+| HR | HRAgent | Employee analysis, tenure, salary benchmarks |
+| CRM | CRMAgent | Pipeline analysis, lead scoring, conversion |
+| Generic | GenericAgent | Default fallback for any dataset |
+
+**Features**:
+- **Auto-detection**: The system detects your data domain via column signatures, synonyms (FR/EN), and value types (currency, date, quantity).
+- **Manual override**: You can select an agent manually via the dropdown in the Agent page.
+- **Follow-up suggestions**: Each agent proposes domain-specific follow-up questions.
+- **100% local**: Works offline with LM Studio or Ollama; cloud providers remain optional.
+
+**Extending agents**:
+
+To add a new agent:
+1. Create a file `agents/domains/your_domain.py` implementing `BaseAgent` (see `agents/base.py`).
+2. Register it in `agents/registry.py`:
+   ```python
+   from agents.domains.your_domain import YourAgent
+   register_agent(YourAgent)
+   ```
+
+That's it! The new agent will appear in the selector and will be auto-detected when its signature columns are present.
 
 ### Conversational Memory
 

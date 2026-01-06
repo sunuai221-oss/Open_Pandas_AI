@@ -4,6 +4,8 @@ Fusion, enrichissement, validation, stockage
 """
 
 from typing import Dict, Any, Optional, List
+
+from core.business_examples import normalize_column_name
 import pandas as pd
 from datetime import datetime
 
@@ -121,10 +123,12 @@ class DataDictionaryManager:
         }
         
         # Enrichir chaque colonne avec les stats détaillées
+        columns = enriched.get('columns', {}) or {}
+        norm_map = {normalize_column_name(k): k for k in columns}
         for col in df.columns:
-            col_clean = col.lower().replace(' ', '_')
-            
-            if col_clean in enriched['columns']:
+            col_clean = normalize_column_name(col)
+            dict_key = norm_map.get(col_clean)
+            if dict_key:
                 col_stats = {
                     'row_count': len(df),
                     'null_count': int(df[col].isna().sum()),
@@ -145,7 +149,7 @@ class DataDictionaryManager:
                 if col_stats['unique_count'] < 20:
                     col_stats['unique_values'] = df[col].unique().tolist()
                 
-                enriched['columns'][col_clean]['statistics'] = col_stats
+                enriched['columns'][dict_key]['statistics'] = col_stats
         
         return enriched
     
@@ -172,8 +176,8 @@ class DataDictionaryManager:
             }
         }
         
-        df_columns = set(col.lower().replace(' ', '_') for col in df.columns)
-        dict_columns = set(dictionary['columns'].keys())
+        df_columns = set(normalize_column_name(col) for col in df.columns)
+        dict_columns = set(normalize_column_name(col) for col in dictionary.get('columns', {}).keys())
         
         # Colonnes documentées
         validation['coverage']['documented_columns'] = len(dict_columns & df_columns)
@@ -201,7 +205,6 @@ class DataDictionaryManager:
         
         # Warnings pour colonnes avec beaucoup de null
         for col in df.columns:
-            col_clean = col.lower().replace(' ', '_')
             null_pct = (df[col].isna().sum() / len(df)) * 100
             
             if null_pct > 50:
@@ -224,13 +227,14 @@ class DataDictionaryManager:
     def get_column_rules(dictionary: Dict, column_name: str) -> Dict[str, Any]:
         """Récupère les règles pour une colonne spécifique"""
         dictionary = DataDictionaryManager.normalize_dictionary(dictionary)
-        col_clean = column_name.lower().replace(' ', '_')
+        col_clean = normalize_column_name(column_name)
         columns = dictionary.get('columns', {})
-        
-        if col_clean not in columns:
+        norm_map = {normalize_column_name(k): k for k in columns}
+        dict_key = norm_map.get(col_clean)
+        if not dict_key:
             return {}
         
-        col_dict = columns[col_clean]
+        col_dict = columns[dict_key]
         rules = {
             'name': column_name,
             'clean_name': col_clean,

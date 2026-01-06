@@ -21,7 +21,7 @@ from components.result_display import render_result
 from components.skills_catalog import detect_skill_from_question
 from core.session_manager import get_session_manager
 from core.memory import SessionMemory
-from core.prompt_builder import build_prompt
+from core.prompt_builder import build_prompt_with_agent
 from core.llm import call_llm
 from core.intention_detector import IntentionDetector
 from core.formatter import format_result, format_result_with_validation
@@ -32,9 +32,13 @@ from core.error_handler import handle_code_error
 from core.consulting import auto_comment_agent
 from core.visualization import generate_and_run_visualization
 from core.business_examples import get_business_example
+from core.business_examples import get_domain_assets
 from core import excel_utils
 from db.session import get_session as get_db_session
 from db.models import Question, CodeExecution, ConsultingMessage
+
+from agents.registry import get_available_agents, get_agent
+from agents.detector import detect_domain
 
 # Session
 session = get_session_manager()
@@ -75,6 +79,48 @@ if not session.has_data:
 df = session.df
 analysis_df = session.df_norm if session.df_norm is not None else df
 
+# Agent selector (orchestration mode)
+available_agents = get_available_agents()
+agent_domains = sorted(available_agents.keys())
+agent_modes = ["auto"] + agent_domains
+current_mode = session.selected_agent_mode if session.selected_agent_mode in agent_modes else "auto"
+
+agent_col_a, agent_col_b = st.columns([2, 3])
+with agent_col_a:
+    selected_mode = st.selectbox(
+        "Mode Agent",
+        options=agent_modes,
+        index=agent_modes.index(current_mode),
+        format_func=lambda d: d.capitalize() if d != "auto" else "Auto",
+        key="agent_mode_select",
+    )
+if selected_mode != session.selected_agent_mode:
+    session.set_selected_agent_mode(selected_mode)
+
+# Resolve active agent
+active_agent = None
+detection = None
+if session.selected_agent_mode == "auto":
+    detection = detect_domain(analysis_df)
+    session.set_agent_detection(
+        detected_agent=detection.domain,
+        confidence=detection.confidence,
+        reasons=detection.reasons,
+    )
+    active_agent = get_agent(detection.domain)
+else:
+    session.set_agent_detection(detected_agent=None, confidence=0.0, reasons=[])
+    active_agent = get_agent(session.selected_agent_mode)
+
+with agent_col_b:
+    if detection:
+        reasons_str = "; ".join(detection.reasons[:4]) if detection.reasons else "n/a"
+        st.info(
+            f"Agent actif: {active_agent.name} (Auto, confiance {detection.confidence:.2f}) — raisons: {reasons_str}"
+        )
+    else:
+        st.info(f"Agent actif: {active_agent.name} (manuel)")
+
 # Data info bar
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
@@ -107,6 +153,21 @@ if session.has_data and not session.exchanges:
     st.dataframe(df.head(preview_rows), use_container_width=True)
     st.caption(f"Display: {min(preview_rows, len(df))} first rows")
     st.markdown("---")
+
+# Agent follow-up suggestions (before first question)
+if session.has_data and not session.exchanges and active_agent:
+    agent_context = {
+        "df_columns": list(df.columns),
+        "language": session.language,
+        "user_level": session.user_level,
+    }
+    agent_suggestions = active_agent.suggest_followups(agent_context)
+    if agent_suggestions:
+        with st.expander(f"💡 Suggestions de l'agent {active_agent.name}", expanded=True):
+            for i, suggestion in enumerate(agent_suggestions[:6], 1):
+                if st.button(suggestion, key=f"agent_sugg_{i}"):
+                    st.session_state["suggested_question"] = suggestion
+                    st.rerun()
 
 # Chat input
 st.markdown("### 💬 Ask your question")
@@ -184,14 +245,16 @@ if (submit or generate_viz or export_result) and user_question:
         # Process with LLM
         code = None
         try:
-            # Check that API key is configured
+            # Only Codestral requires a Mistral API key (offline providers must work without it)
             import os
-            api_key = os.getenv("MISTRAL_API_KEY")
-            if not api_key or api_key == "VOTRE_CLE_CODESRAL_ICI":
-                st.error("❌ **Configuration Error**: Mistral API key is not configured.")
-                st.info("💡 Please set the `MISTRAL_API_KEY` environment variable in a `.env` file at the project root.")
-                st.code("MISTRAL_API_KEY=your_api_key_here", language="bash")
-                st.stop()
+            selected_provider = (llm_provider or "").lower()
+            if selected_provider in ("codestral", "codestral.ai", "mistral", "mistralai"):
+                api_key = os.getenv("MISTRAL_API_KEY")
+                if not api_key or api_key == "VOTRE_CLE_CODESRAL_ICI":
+                    st.error("❌ **Configuration Error**: Mistral API key is not configured for Codestral.")
+                    st.info("💡 Set `MISTRAL_API_KEY` in a `.env` file at the project root, or switch provider to LM Studio / Ollama for 100% local usage.")
+                    st.code("MISTRAL_API_KEY=your_api_key_here", language="bash")
+                    st.stop()
             
             with st.spinner("🧠 Generating code..."):
                 # Build prompt with enhanced context (Phase 1)
@@ -207,7 +270,17 @@ if (submit or generate_viz or export_result) and user_question:
                 data_dictionary = st.session_state.get('data_dictionary')
                 
                 # Build enriched prompt with intentions
-                prompt = build_prompt(
+                agent_context = {
+                    "language": session.language,
+                    "user_level": session.user_level,
+                    "df_columns": list(analysis_df.columns),
+                    "business_context": business_context,
+                }
+                agent_prompt = active_agent.build_agent_prompt(agent_context) if active_agent else ""
+                agent_plan = active_agent.analysis_plan(question, agent_context) if active_agent else {}
+                domain_assets = get_domain_assets(active_agent.domain) if active_agent else {}
+
+                prompt = build_prompt_with_agent(
                     df=analysis_df,
                     question=question,
                     context=context,
@@ -215,7 +288,10 @@ if (submit or generate_viz or export_result) and user_question:
                     user_level=session.user_level,
                     detected_skills=skills_list,
                     data_dictionary=data_dictionary,
-                    business_context=business_context
+                    business_context=business_context,
+                    agent_prompt=agent_prompt,
+                    agent_plan=agent_plan,
+                    domain_assets=domain_assets,
                 )
                 exchange["prompt"] = prompt
                 
@@ -285,7 +361,7 @@ if (submit or generate_viz or export_result) and user_question:
                             continue
                         
                         correction_attempted = True
-                        candidate = execute_code(new_code, df)
+                        candidate = execute_code(new_code, analysis_df)
                         if not (isinstance(candidate, str) and candidate.startswith("Error")):
                             st.success("✅ Correction successful!")
                             raw_result = candidate
