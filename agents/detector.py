@@ -65,6 +65,17 @@ def _signature_score(domain: str, cols: Set[str]) -> Tuple[float, List[str], Lis
     matched = sorted(set(matched))
     if not matched:
         return 0.0, [], []
+    if len(matched) < 2:
+        date_like_matches = [
+            col
+            for col in matched
+            if (
+                normalize_column_name(col) in _DATE_LIKE_COLS
+                or _fuzzy_match(normalize_column_name(col), _DATE_LIKE_COLS, 0.80)
+            )
+        ]
+        if len(date_like_matches) == len(matched):
+            return 0.0, [], []
     # score is ratio of matched signature columns, capped to avoid overpowering business-example match
     score = min(0.85, len(matched) / max(4, len(sig)))
     reasons = [f"Signature columns matched for {domain}: {', '.join(matched[:8])}"]
