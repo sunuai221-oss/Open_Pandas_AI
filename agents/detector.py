@@ -179,16 +179,19 @@ def detect_domain(df: pd.DataFrame) -> DetectionResult:
         if base_domain:
             reasons.append(f"Matched business example '{example_key}' (domain={base_domain}, score={base_conf:.2f})")
 
-    # 2) Synonym matching (v2)
+    # 2) Synonym matching (v2) with minimal gating to avoid single-hit overrides
     syn_score, syn_reasons, syn_matched, syn_key = _synonym_match_score(cols_set)
-    if syn_score > 0:
+    min_syn_hits = 2
+    min_syn_score = 0.45
+    use_synonyms = syn_key and (len(syn_matched) >= min_syn_hits or syn_score >= min_syn_score)
+    if use_synonyms:
         reasons.extend(syn_reasons)
         matched_columns.extend(syn_matched)
 
     domain_candidates: List[Tuple[str, float]] = []
     if base_domain:
         domain_candidates.append((base_domain, base_conf))
-    if syn_key:
+    if use_synonyms:
         syn_domain = (get_business_example(syn_key) or {}).get("domain") or None
         if syn_domain:
             domain_candidates.append((syn_domain, syn_score))
