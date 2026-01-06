@@ -572,9 +572,9 @@ Developed with ❤️ for AI and data enthusiasts.
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/Open_Pandas_AI/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/Open_Pandas_AI/discussions)
-- **Email**: [Your Email]
+- **Issues**: [GitHub Issues](https://github.com/sunuai221-oss/Open_Pandas_AI/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sunuai221-oss/Open_Pandas_AI/discussions)
+- **Email**: sunuai221@gmail.com
 
 ---
 
