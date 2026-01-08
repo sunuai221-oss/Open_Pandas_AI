@@ -1,0 +1,21 @@
+employee_id,first_name,last_name,email,department,job_title,hire_date,salary,bonus_percent,years_experience,performance_rating,is_active
+EMP001,John,Smith,john.smith@company.com,Engineering,Senior Developer,2019-03-15,95000,15,8,4.5,TRUE
+EMP002,Sarah,Johnson,sarah.johnson@company.com,Marketing,Marketing Manager,2020-06-01,75000,12,6,4.2,TRUE
+EMP003,Michael,Brown,michael.brown@company.com,Engineering,Junior Developer,2022-01-10,55000,8,2,3.8,TRUE
+EMP004,Emily,Davis,emily.davis@company.com,HR,HR Specialist,2018-09-20,62000,10,5,4.0,TRUE
+EMP005,David,Wilson,david.wilson@company.com,Finance,Financial Analyst,2021-04-05,70000,11,4,4.3,TRUE
+EMP006,Lisa,Anderson,lisa.anderson@company.com,Engineering,Tech Lead,2017-11-30,115000,18,10,4.8,TRUE
+EMP007,James,Taylor,james.taylor@company.com,Sales,Sales Representative,2023-02-14,52000,20,1,3.5,TRUE
+EMP008,Jennifer,Martinez,jennifer.martinez@company.com,Marketing,Content Writer,2022-08-01,48000,7,3,3.9,TRUE
+EMP009,Robert,Garcia,robert.garcia@company.com,Finance,Senior Accountant,2016-05-22,85000,13,12,4.6,TRUE
+EMP010,Amanda,Lee,amanda.lee@company.com,HR,HR Manager,2015-12-01,90000,14,15,4.7,TRUE
+EMP011,Christopher,White,christopher.white@company.com,Engineering,DevOps Engineer,2020-10-15,88000,14,7,4.4,TRUE
+EMP012,Jessica,Harris,jessica.harris@company.com,Sales,Sales Manager,2018-07-08,82000,22,9,4.5,TRUE
+EMP013,Daniel,Clark,daniel.clark@company.com,Engineering,Data Scientist,2021-09-01,98000,16,5,4.1,TRUE
+EMP014,Michelle,Lewis,michelle.lewis@company.com,Marketing,SEO Specialist,2023-05-20,45000,6,1,3.6,FALSE
+EMP015,Matthew,Robinson,matthew.robinson@company.com,Finance,CFO,2014-01-15,180000,25,20,4.9,TRUE
+EMP016,Ashley,Walker,ashley.walker@company.com,HR,Recruiter,2022-11-08,50000,9,2,3.7,TRUE
+EMP017,Andrew,Hall,andrew.hall@company.com,Engineering,QA Engineer,2019-08-25,65000,10,6,4.0,TRUE
+EMP018,Stephanie,Allen,stephanie.allen@company.com,Sales,Account Executive,2021-03-12,60000,18,4,4.2,TRUE
+EMP019,Joshua,Young,joshua.young@company.com,Marketing,Brand Manager,2020-02-28,72000,12,5,4.3,TRUE
+EMP020,Nicole,King,nicole.king@company.com,Finance,Budget Analyst,2022-06-15,58000,9,3,3.8,TRUE

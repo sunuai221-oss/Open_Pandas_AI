@@ -1,0 +1,21 @@
+transaction_id,date,account_id,transaction_type,amount,currency,balance,category,description
+TXN001,2024-01-01,ACC001,credit,5000.00,USD,15000.00,salary,Monthly Salary
+TXN002,2024-01-02,ACC001,debit,1200.00,USD,13800.00,rent,Monthly Rent Payment
+TXN003,2024-01-03,ACC001,debit,150.00,USD,13650.00,utilities,Electric Bill
+TXN004,2024-01-04,ACC002,credit,3500.00,USD,8500.00,salary,Freelance Payment
+TXN005,2024-01-05,ACC002,debit,500.00,USD,8000.00,investment,Stock Purchase
+TXN006,2024-01-06,ACC001,debit,200.00,USD,13450.00,groceries,Weekly Groceries
+TXN007,2024-01-07,ACC001,credit,100.00,USD,13550.00,refund,Product Return
+TXN008,2024-01-08,ACC002,debit,75.00,USD,7925.00,subscription,Netflix Annual
+TXN009,2024-01-09,ACC001,debit,350.00,USD,13200.00,insurance,Car Insurance
+TXN010,2024-01-10,ACC002,credit,1500.00,USD,9425.00,dividend,Quarterly Dividend
+TXN011,2024-01-11,ACC001,debit,89.99,USD,13110.01,utilities,Internet Bill
+TXN012,2024-01-12,ACC001,debit,250.00,USD,12860.01,entertainment,Concert Tickets
+TXN013,2024-01-13,ACC002,debit,120.00,USD,9305.00,healthcare,Doctor Visit
+TXN014,2024-01-14,ACC001,credit,200.00,USD,13060.01,cashback,Credit Card Rewards
+TXN015,2024-01-15,ACC002,debit,600.00,USD,8705.00,travel,Flight Booking
+TXN016,2024-01-16,ACC001,debit,45.00,USD,13015.01,transportation,Uber Rides
+TXN017,2024-01-17,ACC002,credit,2000.00,USD,10705.00,bonus,Performance Bonus
+TXN018,2024-01-18,ACC001,debit,180.00,USD,12835.01,groceries,Monthly Groceries
+TXN019,2024-01-19,ACC002,debit,99.00,USD,10606.00,subscription,Software License
+TXN020,2024-01-20,ACC001,credit,50.00,USD,12885.01,interest,Savings Interest

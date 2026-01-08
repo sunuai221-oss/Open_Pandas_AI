@@ -1,0 +1,155 @@
+# ============================================================================
+# Load Test Configuration for Open Pandas-AI
+# ============================================================================
+# 
+# Usage:
+#   locust -f tests/load/locustfile.py --host=http://localhost:8501
+#   
+# Or with config:
+#   locust -f tests/load/locustfile.py --config=tests/load/load_test_config.yaml
+#
+# Web UI: http://localhost:8089
+# ============================================================================
+
+# Target host
+host: http://localhost:8501
+
+# Default test settings
+users: 50
+spawn-rate: 5
+run-time: 5m
+
+# Scenarios
+# ---------
+
+scenarios:
+  # Normal usage scenario
+  # Simulates typical daily traffic
+  normal_usage:
+    description: "Normal daily traffic simulation"
+    users: 50
+    spawn_rate: 5  # 5 users per second
+    duration: 5m
+    user_classes:
+      - PandasAIUser
+    expected:
+      p95_response_time: 5000ms  # 95% of requests < 5s
+      error_rate: 1%  # < 1% errors
+      throughput: 10  # > 10 requests/sec
+    
+  # Peak traffic scenario
+  # Simulates high-traffic periods (e.g., end of month reporting)
+  peak_traffic:
+    description: "Peak traffic simulation"
+    users: 200
+    spawn_rate: 20  # 20 users per second
+    duration: 10m
+    user_classes:
+      - PandasAIUser
+      - StreamlitPageUser
+    expected:
+      p95_response_time: 10000ms  # 95% of requests < 10s
+      error_rate: 2%  # < 2% errors
+      throughput: 30  # > 30 requests/sec
+    
+  # Stress test scenario
+  # Tests system limits and breaking points
+  stress_test:
+    description: "Stress test to find breaking points"
+    users: 500
+    spawn_rate: 50  # 50 users per second
+    duration: 15m
+    user_classes:
+      - PandasAIUser
+    expected:
+      p95_response_time: 30000ms  # 95% of requests < 30s
+      error_rate: 5%  # < 5% errors (acceptable degradation)
+      throughput: 20  # > 20 requests/sec
+    
+  # Soak test scenario
+  # Tests for memory leaks and stability over time
+  soak_test:
+    description: "Long-running stability test"
+    users: 100
+    spawn_rate: 10
+    duration: 1h
+    user_classes:
+      - PandasAIUser
+    expected:
+      p95_response_time: 8000ms
+      error_rate: 1%
+      memory_growth: 10%  # < 10% memory growth over test
+
+# Performance SLA (Service Level Agreement)
+# -----------------------------------------
+
+performance_sla:
+  # Response time targets
+  response_time:
+    p50: 2000ms   # Median response time
+    p75: 3500ms   # 75th percentile
+    p90: 5000ms   # 90th percentile
+    p95: 8000ms   # 95th percentile
+    p99: 15000ms  # 99th percentile
+    max: 30000ms  # Maximum acceptable
+  
+  # Error rate targets
+  error_rate:
+    acceptable: 1%   # Normal operation
+    degraded: 5%     # Degraded but functional
+    critical: 10%    # Requires investigation
+  
+  # Throughput targets
+  throughput:
+    minimum: 5   # requests/sec minimum
+    target: 20   # requests/sec target
+    optimal: 50  # requests/sec optimal
+
+# Monitoring thresholds for alerts
+# --------------------------------
+
+alert_thresholds:
+  # Response time alerts
+  response_time_warning: 5000ms
+  response_time_critical: 15000ms
+  
+  # Error rate alerts
+  error_rate_warning: 2%
+  error_rate_critical: 5%
+  
+  # Throughput alerts
+  throughput_low_warning: 10
+  throughput_low_critical: 5
+
+# Resource monitoring
+# -------------------
+
+resource_monitoring:
+  enabled: true
+  metrics:
+    - cpu_usage
+    - memory_usage
+    - disk_io
+    - network_io
+  
+  thresholds:
+    cpu_warning: 70%
+    cpu_critical: 90%
+    memory_warning: 80%
+    memory_critical: 95%
+
+# Report settings
+# ---------------
+
+reporting:
+  # Generate HTML report after test
+  html_report: true
+  html_report_path: "load_test_report.html"
+  
+  # Generate CSV stats
+  csv_stats: true
+  csv_stats_path: "load_test_stats.csv"
+  
+  # Real-time metrics export (for Prometheus/Grafana)
+  prometheus_export: true
+  prometheus_port: 9646

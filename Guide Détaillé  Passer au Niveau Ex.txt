@@ -1,0 +1,2269 @@
+Guide Détaillé : Passer au Niveau Expert 🚀
+1️⃣ TESTS : >80% de Couverture, Tests E2E, Tests de Charge
+📊 Situation actuelle
+10 fichiers de tests pour 80 fichiers source (~12.5% de fichiers testés)
+Pas de mesure de couverture
+Tests unitaires basiques uniquement
+🎯 Ce qu'il faut ajouter
+A. Configuration de la couverture de code
+Fichier : pytest.ini (mise à jour)
+
+[pytest]
+testpaths = tests
+python_files = test_*.py
+addopts = 
+    --cov=core
+    --cov=agents
+    --cov=components
+    --cov=db
+    --cov-report=html
+    --cov-report=term-missing
+    --cov-fail-under=80
+    -v
+    --tb=short
+
+Nouvelles dépendances : requirements-dev.txt
+
+pytest==8.3.2
+pytest-cov==5.0.0
+pytest-asyncio==0.23.5
+pytest-mock==3.12.0
+pytest-xdist==3.5.0  # Tests parallèles
+coverage==7.4.3
+locust==2.23.1  # Tests de charge
+playwright==1.41.2  # Tests E2E
+faker==24.0.0  # Données de test
+freezegun==1.4.0  # Mock du temps
+responses==0.25.0  # Mock des requêtes HTTP
+
+B. Tests unitaires à ajouter (exemples concrets)
+Fichier : tests/test_prompt_builder.py (nouveau)
+
+import pytest
+from core.prompt_builder import build_prompt_with_agent, build_context_section
+from agents.finance import FinanceAgent
+import pandas as pd
+
+class TestPromptBuilder:
+    """Tests pour la construction de prompts"""
+    
+    @pytest.fixture
+    def sample_dataframe(self):
+        return pd.DataFrame({
+            'transaction_id': [1, 2, 3],
+            'amount': [100.50, 250.00, 75.25],
+            'date': ['2024-01-01', '2024-01-02', '2024-01-03']
+        })
+    
+    @pytest.fixture
+    def finance_agent(self):
+        return FinanceAgent()
+    
+    def test_build_prompt_includes_schema(self, sample_dataframe, finance_agent):
+        """Le prompt doit contenir le schéma du DataFrame"""
+        prompt = build_prompt_with_agent(
+            question="Quelle est la somme totale ?",
+            df=sample_dataframe,
+            agent=finance_agent
+        )
+        assert 'transaction_id' in prompt
+        assert 'amount' in prompt
+        assert 'date' in prompt
+    
+    def test_build_prompt_includes_agent_context(self, sample_dataframe, finance_agent):
+        """Le prompt doit contenir le contexte de l'agent Finance"""
+        prompt = build_prompt_with_agent(
+            question="Analyse les transactions",
+            df=sample_dataframe,
+            agent=finance_agent
+        )
+        assert 'finance' in prompt.lower() or 'transaction' in prompt.lower()
+    
+    def test_build_context_with_empty_dataframe(self):
+        """Gestion d'un DataFrame vide"""
+        empty_df = pd.DataFrame()
+        context = build_context_section(empty_df)
+        assert 'vide' in context.lower() or 'empty' in context.lower()
+    
+    def test_build_prompt_with_large_dataframe(self):
+        """Le prompt doit tronquer les grands DataFrames"""
+        large_df = pd.DataFrame({'col': range(10000)})
+        prompt = build_prompt_with_agent("Analyse", large_df, None)
+        # Le prompt ne doit pas contenir toutes les 10000 lignes
+        assert len(prompt) < 50000  # Limite raisonnable
+
+Fichier : tests/test_executor_security.py (nouveau)
+
+import pytest
+from core.executor import execute_code
+from core.code_security import is_code_safe
+
+class TestCodeSecurity:
+    """Tests de sécurité pour l'exécution de code"""
+    
+    def test_block_import_statements(self):
+        """Les imports doivent être bloqués"""
+        dangerous_code = "import os\nos.system('rm -rf /')"
+        assert not is_code_safe(dangerous_code)
+    
+    def test_block_file_operations(self):
+        """Les opérations fichier doivent être bloquées"""
+        dangerous_code = "open('/etc/passwd', 'r').read()"
+        assert not is_code_safe(dangerous_code)
+    
+    def test_block_network_operations(self):
+        """Les opérations réseau doivent être bloquées"""
+        dangerous_code = "import socket\nsocket.socket()"
+        assert not is_code_safe(dangerous_code)
+    
+    def test_allow_safe_pandas_code(self):
+        """Le code Pandas sûr doit être autorisé"""
+        safe_code = "result = df['amount'].sum()"
+        assert is_code_safe(safe_code)
+    
+    @pytest.mark.timeout(15)
+    def test_execution_timeout(self):
+        """L'exécution doit timeout après 10-30s"""
+        import pandas as pd
+        df = pd.DataFrame({'a': range(1000)})
+        
+        infinite_loop = """
+import time
+while True:
+    time.sleep(1)
+"""
+        with pytest.raises(TimeoutError):
+            execute_code(infinite_loop, df, timeout=2)
+
+C. Tests d'intégration (E2E)
+Fichier : tests/e2e/test_question_flow.py (nouveau)
+
+import pytest
+from playwright.sync_api import Page, expect
+import time
+
+class TestQuestionFlow:
+    """Tests bout-en-bout du flux complet de questions"""
+    
+    @pytest.fixture(scope="session")
+    def browser_context(playwright):
+        browser = playwright.chromium.launch()
+        context = browser.new_context()
+        yield context
+        context.close()
+        browser.close()
+    
+    def test_upload_and_ask_question(self, page: Page):
+        """Test complet : upload fichier + question + résultat"""
+        
+        # 1. Naviguer vers l'application
+        page.goto("http://localhost:8501")
+        
+        # 2. Upload un fichier CSV
+        page.set_input_files(
+            "input[type='file']", 
+            "tests/fixtures/sample_finance.csv"
+        )
+        
+        # Attendre que l'upload soit traité
+        expect(page.locator("text=Fichier chargé")).to_be_visible(timeout=5000)
+        
+        # 3. Aller sur la page Agent
+        page.click("text=Agent")
+        
+        # 4. Poser une question
+        page.fill("textarea[placeholder*='question']", "Quelle est la somme totale ?")
+        page.click("button:has-text('Envoyer')")
+        
+        # 5. Attendre la réponse
+        expect(page.locator("text=Résultat")).to_be_visible(timeout=30000)
+        
+        # 6. Vérifier qu'un résultat numérique est affiché
+        result_text = page.locator(".stDataFrame, .stMetric").inner_text()
+        assert len(result_text) > 0
+        
+        # 7. Vérifier que le code généré est affiché
+        expect(page.locator("code")).to_be_visible()
+    
+    def test_domain_detection(self, page: Page):
+        """Test de la détection automatique de domaine"""
+        
+        page.goto("http://localhost:8501")
+        
+        # Upload fichier avec colonnes finance
+        page.set_input_files(
+            "input[type='file']", 
+            "tests/fixtures/transactions.csv"
+        )
+        
+        page.click("text=Agent")
+        
+        # Vérifier que le domaine "Finance" est auto-détecté
+        expect(page.locator("text=Finance")).to_be_visible(timeout=5000)
+    
+    def test_error_handling(self, page: Page):
+        """Test de la gestion d'erreur pour question invalide"""
+        
+        page.goto("http://localhost:8501")
+        page.set_input_files("input[type='file']", "tests/fixtures/sample.csv")
+        page.click("text=Agent")
+        
+        # Question qui va générer une erreur
+        page.fill("textarea", "Fais quelque chose d'impossible")
+        page.click("button:has-text('Envoyer')")
+        
+        # Vérifier qu'un message d'erreur apparaît
+        expect(page.locator(".stError, .stException")).to_be_visible(timeout=30000)
+
+Script de lancement E2E : scripts/run_e2e_tests.sh
+
+#!/bin/bash
+
+# Démarrer l'application en arrière-plan
+docker-compose up -d
+
+# Attendre que l'app soit prête
+echo "Waiting for app to be ready..."
+sleep 10
+
+# Installer Playwright browsers
+python -m playwright install chromium
+
+# Lancer les tests E2E
+pytest tests/e2e/ -v --headed
+
+# Arrêter l'application
+docker-compose down
+
+D. Tests de charge (Load Testing)
+Fichier : tests/load/locustfile.py (nouveau)
+
+from locust import HttpUser, task, between
+import random
+
+class PandasAIUser(HttpUser):
+    """Simulation d'utilisateurs pour tests de charge"""
+    
+    wait_time = between(2, 5)  # Attente entre 2-5s entre requêtes
+    
+    def on_start(self):
+        """Exécuté au démarrage de chaque utilisateur virtuel"""
+        # Upload un fichier
+        with open('tests/fixtures/sample.csv', 'rb') as f:
+            self.client.post('/upload', files={'file': f})
+    
+    @task(3)  # Poids 3 : cette tâche sera exécutée 3x plus souvent
+    def ask_simple_question(self):
+        """Question simple (agrégation)"""
+        questions = [
+            "Quelle est la somme totale ?",
+            "Combien de lignes ?",
+            "Quelle est la moyenne ?",
+        ]
+        self.client.post('/api/ask', json={
+            'question': random.choice(questions)
+        })
+    
+    @task(2)
+    def ask_complex_question(self):
+        """Question complexe (groupby, filter)"""
+        questions = [
+            "Groupe par catégorie et calcule la somme",
+            "Filtre les valeurs > 100 et trie par date",
+        ]
+        self.client.post('/api/ask', json={
+            'question': random.choice(questions)
+        })
+    
+    @task(1)
+    def view_history(self):
+        """Consultation de l'historique"""
+        self.client.get('/api/history')
+
+# Commande pour lancer : locust -f tests/load/locustfile.py --host=http://localhost:8501
+# Interface web : http://localhost:8089
+
+Configuration tests de charge : tests/load/load_test_config.yaml
+
+scenarios:
+  normal_usage:
+    users: 50
+    spawn_rate: 5  # 5 utilisateurs/seconde
+    duration: 5m
+    
+  peak_traffic:
+    users: 200
+    spawn_rate: 20
+    duration: 10m
+    
+  stress_test:
+    users: 500
+    spawn_rate: 50
+    duration: 15m
+    
+# SLA attendus
+performance_sla:
+  p95_response_time: 5000ms  # 95% des requêtes < 5s
+  error_rate: 1%  # < 1% d'erreurs
+  throughput: 10  # > 10 req/s
+
+2️⃣ CI/CD : Pipeline Complet avec Déploiement Automatisé
+🎯 Ce qu'il faut ajouter
+A. GitHub Actions - Pipeline de Test et Build
+Fichier : .github/workflows/ci.yml (nouveau)
+
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  
+jobs:
+  # Job 1 : Linting et formatage
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install black flake8 isort mypy
+          pip install -r requirements.txt
+      
+      - name: Run Black (code formatting)
+        run: black --check .
+      
+      - name: Run Flake8 (linting)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Run isort (import sorting)
+        run: isort --check-only .
+      
+      - name: Run MyPy (type checking)
+        run: mypy core/ agents/ --ignore-missing-imports
+
+  # Job 2 : Tests unitaires avec couverture
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/test_db
+        run: |
+          pytest --cov=core --cov=agents --cov=components \
+                 --cov-report=xml --cov-report=term \
+                 --cov-fail-under=80 \
+                 -v
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+  # Job 3 : Tests de sécurité
+  security:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Bandit (security linter)
+        run: |
+          pip install bandit
+          bandit -r core/ agents/ -f json -o bandit-report.json
+      
+      - name: Run Safety (dependency vulnerability check)
+        run: |
+          pip install safety
+          safety check --json
+      
+      - name: Run Trivy (container scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+  # Job 4 : Build Docker image
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: yourusername/open-pandas-ai
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 5 : Tests E2E
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Pull Docker image
+        run: docker pull yourusername/open-pandas-ai:sha-${{ github.sha }}
+      
+      - name: Start application
+        run: |
+          docker-compose up -d
+          sleep 15  # Attendre le démarrage
+      
+      - name: Install Playwright
+        run: |
+          pip install playwright pytest-playwright
+          playwright install chromium
+      
+      - name: Run E2E tests
+        run: pytest tests/e2e/ -v
+      
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-screenshots
+          path: tests/e2e/screenshots/
+
+B. Pipeline de Déploiement CD
+Fichier : .github/workflows/cd.yml (nouveau)
+
+name: CD Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Déclenchement sur tags version (v1.0.0)
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to AWS ECS (Staging)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: eu-west-1
+        run: |
+          # Mise à jour de la task definition ECS
+          aws ecs update-service \
+            --cluster pandas-ai-staging \
+            --service pandas-ai-app \
+            --force-new-deployment
+      
+      - name: Wait for deployment
+        run: sleep 60
+      
+      - name: Run smoke tests
+        run: |
+          curl -f https://staging.pandas-ai.com/health || exit 1
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Kubernetes (Production)
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          echo "$KUBE_CONFIG" > kubeconfig.yaml
+          kubectl --kubeconfig=kubeconfig.yaml set image \
+            deployment/pandas-ai-app \
+            pandas-ai-app=yourusername/open-pandas-ai:${{ github.ref_name }}
+      
+      - name: Monitor rollout
+        run: |
+          kubectl --kubeconfig=kubeconfig.yaml rollout status \
+            deployment/pandas-ai-app --timeout=5m
+      
+      - name: Run production smoke tests
+        run: |
+          curl -f https://app.pandas-ai.com/health || exit 1
+      
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "✅ Open Pandas-AI ${{ github.ref_name }} deployed to production"
+            }
+
+C. Configuration des Environnements
+Fichier : k8s/production/deployment.yaml (nouveau)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pandas-ai-app
+  namespace: production
+spec:
+  replicas: 3  # 3 instances pour haute disponibilité
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero-downtime deployment
+  selector:
+    matchLabels:
+      app: pandas-ai
+  template:
+    metadata:
+      labels:
+        app: pandas-ai
+        version: v1.0.0
+    spec:
+      containers:
+      - name: pandas-ai-app
+        image: yourusername/open-pandas-ai:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: url
+        - name: MISTRAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: llm-credentials
+              key: mistral-key
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8501
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pandas-ai-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8501
+  selector:
+    app: pandas-ai
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pandas-ai-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pandas-ai-app
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+3️⃣ OBSERVABILITÉ : Logging Structuré, Métriques, Tracing, Alerting
+🎯 Ce qu'il faut ajouter
+A. Logging Structuré avec Loguru
+Nouvelles dépendances : requirements.txt
+
+loguru==0.7.2
+python-json-logger==2.0.7
+
+Fichier : core/logger.py (nouveau)
+
+from loguru import logger
+import sys
+import json
+from datetime import datetime
+
+# Configuration du logger structuré
+logger.remove()  # Retirer le handler par défaut
+
+# Format JSON pour aggrégation (ELK, Datadog, etc.)
+def json_formatter(record):
+    """Format JSON structuré pour les logs"""
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "level": record["level"].name,
+        "message": record["message"],
+        "module": record["name"],
+        "function": record["function"],
+        "line": record["line"],
+    }
+    
+    # Ajouter le contexte extra
+    if record["extra"]:
+        log_entry["context"] = record["extra"]
+    
+    # Ajouter l'exception si présente
+    if record["exception"]:
+        log_entry["exception"] = {
+            "type": record["exception"].type.__name__,
+            "value": str(record["exception"].value"),
+            "traceback": record["exception"].traceback
+        }
+    
+    return json.dumps(log_entry)
+
+# Handler pour fichier (JSON structuré)
+logger.add(
+    "logs/app_{time:YYYY-MM-DD}.log",
+    format=json_formatter,
+    rotation="1 day",
+    retention="30 days",
+    compression="zip",
+    level="INFO"
+)
+
+# Handler pour console (human-readable en dev)
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="DEBUG"
+)
+
+# Exports
+__all__ = ["logger"]
+
+Utilisation dans le code :
+
+Fichier : core/executor.py (modification)
+
+from core.logger import logger
+import time
+
+def execute_code(code: str, df, timeout=30):
+    """Exécute le code généré dans un sandbox"""
+    
+    execution_id = f"exec_{int(time.time())}"
+    
+    # Log structuré avec contexte
+    logger.info(
+        "Starting code execution",
+        execution_id=execution_id,
+        code_length=len(code),
+        df_shape=df.shape,
+        timeout=timeout
+    )
+    
+    start_time = time.time()
+    
+    try:
+        result = _execute_in_sandbox(code, df, timeout)
+        
+        execution_time = time.time() - start_time
+        
+        logger.info(
+            "Code execution successful",
+            execution_id=execution_id,
+            execution_time_ms=round(execution_time * 1000, 2),
+            result_type=type(result).__name__
+        )
+        
+        return result
+        
+    except TimeoutError as e:
+        logger.error(
+            "Code execution timeout",
+            execution_id=execution_id,
+            timeout=timeout,
+            exception=str(e)
+        )
+        raise
+        
+    except Exception as e:
+        logger.error(
+            "Code execution failed",
+            execution_id=execution_id,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            exc_info=True  # Inclure le traceback
+        )
+        raise
+
+B. Métriques avec Prometheus
+Nouvelles dépendances :
+
+prometheus-client==0.20.0
+prometheus-flask-exporter==0.23.0
+
+Fichier : core/metrics.py (nouveau)
+
+from prometheus_client import Counter, Histogram, Gauge, Info
+import time
+
+# Métriques business
+questions_total = Counter(
+    'pandas_ai_questions_total',
+    'Total number of questions asked',
+    ['domain', 'status']  # Labels
+)
+
+question_duration_seconds = Histogram(
+    'pandas_ai_question_duration_seconds',
+    'Time spent processing a question',
+    ['domain'],
+    buckets=[0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
+)
+
+code_executions_total = Counter(
+    'pandas_ai_code_executions_total',
+    'Total code executions',
+    ['status', 'sandbox_type']
+)
+
+llm_requests_total = Counter(
+    'pandas_ai_llm_requests_total',
+    'Total LLM API requests',
+    ['provider', 'status']
+)
+
+llm_tokens_total = Counter(
+    'pandas_ai_llm_tokens_total',
+    'Total tokens consumed',
+    ['provider', 'type']  # type = prompt | completion
+)
+
+# Métriques techniques
+active_users = Gauge(
+    'pandas_ai_active_users',
+    'Number of active users'
+)
+
+dataframe_rows = Histogram(
+    'pandas_ai_dataframe_rows',
+    'Number of rows in uploaded DataFrames',
+    buckets=[10, 100, 1000, 10000, 100000, 1000000]
+)
+
+# Métriques système
+app_info = Info('pandas_ai_app', 'Application information')
+app_info.info({
+    'version': '1.0.0',
+    'python_version': '3.11',
+    'environment': 'production'
+})
+
+# Fonction helper pour tracker les questions
+class QuestionMetrics:
+    """Context manager pour tracker les métriques d'une question"""
+    
+    def __init__(self, domain: str):
+        self.domain = domain
+        self.start_time = None
+    
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        duration = time.time() - self.start_time
+        
+        status = 'success' if exc_type is None else 'error'
+        
+        questions_total.labels(domain=self.domain, status=status).inc()
+        question_duration_seconds.labels(domain=self.domain).observe(duration)
+        
+        return False  # Ne pas supprimer l'exception
+
+Utilisation :
+
+Fichier : pages/3_🤖_Agent.py (modification)
+
+from core.metrics import QuestionMetrics, llm_requests_total, active_users
+import streamlit as st
+
+# Incrémenter le nombre d'utilisateurs actifs
+active_users.inc()
+
+# Dans le handler de question
+if st.button("Envoyer"):
+    question = st.session_state.user_question
+    domain = detect_domain(st.session_state.df)
+    
+    # Tracker les métriques
+    with QuestionMetrics(domain=domain):
+        # Appeler le LLM
+        llm_requests_total.labels(provider='codestral', status='pending').inc()
+        
+        try:
+            response = call_llm(question)
+            llm_requests_total.labels(provider='codestral', status='success').inc()
+        except Exception as e:
+            llm_requests_total.labels(provider='codestral', status='error').inc()
+            raise
+
+Endpoint Prometheus : core/prometheus_endpoint.py (nouveau)
+
+from prometheus_client import make_wsgi_app
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.serving import run_simple
+
+def create_metrics_app():
+    """Crée une app WSGI pour exposer les métriques"""
+    app = make_wsgi_app()
+    return app
+
+if __name__ == '__main__':
+    # Lancer sur port 9090
+    metrics_app = create_metrics_app()
+    run_simple('0.0.0.0', 9090, metrics_app, use_reloader=False)
+
+Configuration Prometheus : prometheus/prometheus.yml (nouveau)
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'pandas-ai'
+    static_configs:
+      - targets: ['app:9090']
+    metrics_path: '/metrics'
+
+C. Tracing Distribué avec OpenTelemetry
+Nouvelles dépendances :
+
+opentelemetry-api==1.23.0
+opentelemetry-sdk==1.23.0
+opentelemetry-instrumentation-requests==0.44b0
+opentelemetry-exporter-jaeger==1.23.0
+
+Fichier : core/tracing.py (nouveau)
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.sdk.resources import Resource
+
+# Configuration du tracer
+resource = Resource.create({
+    "service.name": "open-pandas-ai",
+    "service.version": "1.0.0",
+})
+
+trace.set_tracer_provider(TracerProvider(resource=resource))
+
+# Exporter vers Jaeger
+jaeger_exporter = JaegerExporter(
+    agent_host_name="jaeger",
+    agent_port=6831,
+)
+
+trace.get_tracer_provider().add_span_processor(
+    BatchSpanProcessor(jaeger_exporter)
+)
+
+tracer = trace.get_tracer(__name__)
+
+# Decorator pour tracer automatiquement
+def traced(func):
+    """Decorator pour tracer une fonction"""
+    def wrapper(*args, **kwargs):
+        with tracer.start_as_current_span(func.__name__) as span:
+            # Ajouter des attributs
+            span.set_attribute("function", func.__name__)
+            span.set_attribute("module", func.__module__)
+            
+            try:
+                result = func(*args, **kwargs)
+                span.set_attribute("status", "success")
+                return result
+            except Exception as e:
+                span.set_attribute("status", "error")
+                span.record_exception(e)
+                raise
+    
+    return wrapper
+
+Utilisation :
+
+from core.tracing import tracer, traced
+
+@traced
+def process_question(question: str, df):
+    """Process une question avec tracing automatique"""
+    
+    with tracer.start_as_current_span("detect_intention") as span:
+        intentions = detect_intentions(question)
+        span.set_attribute("intentions_count", len(intentions))
+    
+    with tracer.start_as_current_span("call_llm") as span:
+        span.set_attribute("question_length", len(question))
+        response = call_llm(question)
+        span.set_attribute("response_length", len(response))
+    
+    with tracer.start_as_current_span("execute_code") as span:
+        result = execute_code(response, df)
+        span.set_attribute("result_type", type(result).__name__)
+    
+    return result
+
+D. Alerting avec Alertmanager
+Configuration Alertmanager : alertmanager/alertmanager.yml (nouveau)
+
+global:
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'slack-notifications'
+  
+  routes:
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      continue: true
+    
+    - match:
+        severity: warning
+      receiver: 'slack-notifications'
+
+receivers:
+  - name: 'slack-notifications'
+    slack_configs:
+      - channel: '#pandas-ai-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_KEY'
+
+Règles d'alertes : prometheus/alerts.yml (nouveau)
+
+groups:
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # Taux d'erreur élevé
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(pandas_ai_questions_total{status="error"}[5m])
+            /
+            rate(pandas_ai_questions_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur élevé: {{ $value | humanizePercentage }}"
+          description: "Plus de 5% des questions échouent"
+      
+      # Latence élevée
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(pandas_ai_question_duration_seconds_bucket[5m])
+          ) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 latency: {{ $value }}s"
+          description: "95% des questions prennent plus de 30s"
+      
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="pandas-ai"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service Open Pandas-AI DOWN"
+          description: "Le service ne répond plus depuis 1 minute"
+      
+      # Consommation tokens LLM élevée
+      - alert: HighLLMTokenUsage
+        expr: |
+          rate(pandas_ai_llm_tokens_total[1h]) > 1000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consommation tokens: {{ $value }} tokens/h"
+          description: "Attention aux coûts LLM élevés"
+      
+      # Mémoire élevée
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            container_memory_usage_bytes{container="pandas-ai-app"}
+            /
+            container_spec_memory_limit_bytes{container="pandas-ai-app"}
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Utilisation mémoire: {{ $value | humanizePercentage }}"
+          description: "Le conteneur utilise plus de 85% de sa mémoire"
+
+4️⃣ PERFORMANCE : Caching Redis, Optimisations Pandas, Async
+🎯 Ce qu'il faut ajouter
+A. Caching Redis pour résultats LLM
+Nouvelles dépendances :
+
+redis==5.0.1
+redis-om==0.2.1
+
+Fichier : core/cache.py (nouveau)
+
+import redis
+import json
+import hashlib
+from typing import Any, Optional
+from functools import wraps
+import pickle
+
+class RedisCache:
+    """Cache Redis pour les réponses LLM et résultats de calculs"""
+    
+    def __init__(self, host='redis', port=6379, db=0, ttl=3600):
+        self.client = redis.Redis(
+            host=host,
+            port=port,
+            db=db,
+            decode_responses=False  # Pour stocker des objets pickled
+        )
+        self.ttl = ttl  # Time-to-live par défaut: 1 heure
+    
+    def _generate_key(self, prefix: str, *args, **kwargs) -> str:
+        """Génère une clé unique basée sur les arguments"""
+        content = f"{prefix}:{args}:{sorted(kwargs.items())}"
+        return hashlib.sha256(content.encode()).hexdigest()
+    
+    def get(self, key: str) -> Optional[Any]:
+        """Récupère une valeur du cache"""
+        value = self.client.get(key)
+        if value:
+            return pickle.loads(value)
+        return None
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None):
+        """Stocke une valeur dans le cache"""
+        serialized = pickle.dumps(value)
+        self.client.setex(
+            key,
+            ttl or self.ttl,
+            serialized
+        )
+    
+    def delete(self, key: str):
+        """Supprime une clé du cache"""
+        self.client.delete(key)
+    
+    def clear_pattern(self, pattern: str):
+        """Supprime toutes les clés matchant un pattern"""
+        for key in self.client.scan_iter(match=pattern):
+            self.client.delete(key)
+
+# Instance globale
+cache = RedisCache()
+
+# Decorator pour cacher les résultats de fonction
+def cached(prefix: str, ttl: int = 3600):
+    """Decorator pour cacher automatiquement les résultats de fonction"""
+    
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Générer la clé de cache
+            cache_key = cache._generate_key(prefix, *args, **kwargs)
+            
+            # Chercher dans le cache
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                logger.info(f"Cache HIT pour {func.__name__}", cache_key=cache_key)
+                return cached_result
+            
+            # Sinon, exécuter la fonction
+            logger.info(f"Cache MISS pour {func.__name__}", cache_key=cache_key)
+            result = func(*args, **kwargs)
+            
+            # Stocker dans le cache
+            cache.set(cache_key, result, ttl=ttl)
+            
+            return result
+        
+        return wrapper
+    return decorator
+
+Utilisation :
+
+Fichier : core/llm.py (modification)
+
+from core.cache import cached
+from core.logger import logger
+import hashlib
+
+@cached(prefix="llm_response", ttl=7200)  # Cache 2 heures
+def call_llm(prompt: str, model: str = "codestral-latest") -> str:
+    """Appel LLM avec cache automatique"""
+    
+    logger.info("Calling LLM", model=model, prompt_length=len(prompt))
+    
+    # Appel réel à l'API
+    response = _actual_llm_call(prompt, model)
+    
+    return response
+
+# Invalidation manuelle du cache si nécessaire
+def invalidate_llm_cache_for_user(user_id: str):
+    """Invalide le cache LLM pour un utilisateur"""
+    from core.cache import cache
+    cache.clear_pattern(f"llm_response:*user_id={user_id}*")
+
+B. Optimisations Pandas
+Fichier : core/pandas_optimizer.py (nouveau)
+
+import pandas as pd
+import numpy as np
+from typing import Dict
+
+class PandasOptimizer:
+    """Optimise automatiquement les DataFrames pour réduire l'empreinte mémoire"""
+    
+    @staticmethod
+    def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
+        """Optimise les types de données pour réduire la mémoire"""
+        
+        df_optimized = df.copy()
+        
+        # Optimiser les integers
+        for col in df_optimized.select_dtypes(include=['int']).columns:
+            col_min = df_optimized[col].min()
+            col_max = df_optimized[col].max()
+            
+            if col_min >= 0:
+                # Unsigned integers
+                if col_max < 255:
+                    df_optimized[col] = df_optimized[col].astype(np.uint8)
+                elif col_max < 65535:
+                    df_optimized[col] = df_optimized[col].astype(np.uint16)
+                elif col_max < 4294967295:
+                    df_optimized[col] = df_optimized[col].astype(np.uint32)
+            else:
+                # Signed integers
+                if col_min > -128 and col_max < 127:
+                    df_optimized[col] = df_optimized[col].astype(np.int8)
+                elif col_min > -32768 and col_max < 32767:
+                    df_optimized[col] = df_optimized[col].astype(np.int16)
+                elif col_min > -2147483648 and col_max < 2147483647:
+                    df_optimized[col] = df_optimized[col].astype(np.int32)
+        
+        # Optimiser les floats
+        for col in df_optimized.select_dtypes(include=['float']).columns:
+            df_optimized[col] = df_optimized[col].astype(np.float32)
+        
+        # Optimiser les objets (strings)
+        for col in df_optimized.select_dtypes(include=['object']).columns:
+            num_unique = df_optimized[col].nunique()
+            num_total = len(df_optimized[col])
+            
+            # Si moins de 50% de valeurs uniques, convertir en category
+            if num_unique / num_total < 0.5:
+                df_optimized[col] = df_optimized[col].astype('category')
+        
+        return df_optimized
+    
+    @staticmethod
+    def get_memory_usage(df: pd.DataFrame) -> Dict[str, float]:
+        """Retourne l'utilisation mémoire détaillée"""
+        memory_usage = df.memory_usage(deep=True)
+        
+        return {
+            'total_mb': memory_usage.sum() / 1024**2,
+            'per_column': {
+                col: memory_usage[col] / 1024**2 
+                for col in df.columns
+            }
+        }
+    
+    @staticmethod
+    def chunk_operations(df: pd.DataFrame, func, chunksize=10000):
+        """Exécute une fonction par chunks pour économiser la mémoire"""
+        results = []
+        
+        for start in range(0, len(df), chunksize):
+            end = min(start + chunksize, len(df))
+            chunk = df.iloc[start:end]
+            results.append(func(chunk))
+        
+        return pd.concat(results, ignore_index=True)
+
+# Utilisation
+def process_large_dataframe(df: pd.DataFrame):
+    """Exemple d'utilisation de l'optimizer"""
+    
+    # Avant optimisation
+    before = PandasOptimizer.get_memory_usage(df)
+    logger.info(f"Memory BEFORE: {before['total_mb']:.2f} MB")
+    
+    # Optimiser
+    df_optimized = PandasOptimizer.optimize_dtypes(df)
+    
+    # Après optimisation
+    after = PandasOptimizer.get_memory_usage(df_optimized)
+    logger.info(f"Memory AFTER: {after['total_mb']:.2f} MB")
+    logger.info(f"Saved: {(before['total_mb'] - after['total_mb']):.2f} MB")
+    
+    return df_optimized
+
+Fichier : core/pandas_accelerators.py (nouveau)
+
+import pandas as pd
+import numpy as np
+
+class PandasAccelerators:
+    """Accélérateurs pour opérations Pandas courantes"""
+    
+    @staticmethod
+    def fast_groupby_sum(df: pd.DataFrame, group_col: str, value_col: str):
+        """GroupBy sum optimisé avec NumPy"""
+        
+        # Convertir en arrays NumPy (plus rapide)
+        groups = df[group_col].values
+        values = df[value_col].values
+        
+        # Utiliser bincount pour aggregation rapide
+        unique_groups, group_indices = np.unique(groups, return_inverse=True)
+        sums = np.bincount(group_indices, weights=values)
+        
+        return pd.DataFrame({
+            group_col: unique_groups,
+            value_col: sums
+        })
+    
+    @staticmethod
+    def vectorized_string_operations(series: pd.Series):
+        """Opérations sur strings vectorisées"""
+        
+        # MAUVAIS (lent)
+        # result = series.apply(lambda x: x.upper() if isinstance(x, str) else x)
+        
+        # BON (rapide)
+        result = series.str.upper()
+        
+        return result
+    
+    @staticmethod
+    def efficient_merge(df1: pd.DataFrame, df2: pd.DataFrame, on: str):
+        """Merge optimisé avec index"""
+        
+        # Créer des index pour accélérer le merge
+        df1_indexed = df1.set_index(on)
+        df2_indexed = df2.set_index(on)
+        
+        # Merge sur index (plus rapide)
+        result = df1_indexed.join(df2_indexed, how='inner')
+        
+        return result.reset_index()
+
+C. Async/Await pour opérations concurrentes
+Nouvelles dépendances :
+
+asyncio
+aiohttp==3.9.3
+aiofiles==23.2.1
+
+Fichier : core/async_executor.py (nouveau)
+
+import asyncio
+import aiohttp
+from typing import List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
+
+class AsyncExecutor:
+    """Exécuteur asynchrone pour opérations concurrentes"""
+    
+    def __init__(self, max_workers=10):
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+    
+    async def call_llm_async(self, prompt: str, provider: str = "codestral") -> str:
+        """Appel LLM asynchrone"""
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"https://api.mistral.ai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {API_KEY}"},
+                json={
+                    "model": "codestral-latest",
+                    "messages": [{"role": "user", "content": prompt}]
+                }
+            ) as response:
+                data = await response.json()
+                return data['choices'][0]['message']['content']
+    
+    async def process_multiple_questions(self, questions: List[str]) -> List[str]:
+        """Traite plusieurs questions en parallèle"""
+        
+        # Créer des tasks asynchrones
+        tasks = [
+            self.call_llm_async(q) 
+            for q in questions
+        ]
+        
+        # Exécuter en parallèle
+        results = await asyncio.gather(*tasks)
+        
+        return results
+    
+    async def batch_execute_code(self, codes: List[str], df) -> List[Any]:
+        """Exécute plusieurs codes en parallèle (dans des threads)"""
+        
+        loop = asyncio.get_event_loop()
+        
+        tasks = [
+            loop.run_in_executor(
+                self.executor,
+                execute_code,  # Fonction synchrone
+                code,
+                df
+            )
+            for code in codes
+        ]
+        
+        results = await asyncio.gather(*tasks)
+        return results
+
+# Utilisation
+async def main():
+    executor = AsyncExecutor()
+    
+    questions = [
+        "Quelle est la somme totale ?",
+        "Combien de lignes ?",
+        "Quelle est la moyenne ?"
+    ]
+    
+    # Traiter 3 questions en parallèle au lieu de séquentiellement
+    results = await executor.process_multiple_questions(questions)
+    
+    # Avant : 3 questions × 3s = 9s total
+    # Après : max(3s, 3s, 3s) = 3s total
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
+5️⃣ SCALABILITÉ : Queue de Jobs (Celery), Load Balancing, Auto-scaling
+🎯 Ce qu'il faut ajouter
+A. Celery pour Queue de Jobs Asynchrones
+Nouvelles dépendances :
+
+celery[redis]==5.3.6
+flower==2.0.1  # Interface web pour monitoring Celery
+
+Fichier : core/celery_app.py (nouveau)
+
+from celery import Celery
+from celery.signals import task_prerun, task_postrun, task_failure
+from core.logger import logger
+from core.metrics import code_executions_total
+
+# Configuration Celery
+celery_app = Celery(
+    'pandas_ai',
+    broker='redis://redis:6379/0',
+    backend='redis://redis:6379/1'
+)
+
+celery_app.conf.update(
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='UTC',
+    enable_utc=True,
+    task_track_started=True,
+    task_time_limit=300,  # 5 minutes max
+    task_soft_time_limit=240,  # Warning à 4 minutes
+    worker_prefetch_multiplier=4,
+    worker_max_tasks_per_child=1000,
+)
+
+# Signals pour logging et métriques
+@task_prerun.connect
+def task_prerun_handler(sender=None, task_id=None, task=None, **kwargs):
+    logger.info(f"Task starting: {task.name}", task_id=task_id)
+
+@task_postrun.connect
+def task_postrun_handler(sender=None, task_id=None, task=None, **kwargs):
+    logger.info(f"Task completed: {task.name}", task_id=task_id)
+    code_executions_total.labels(status='success', sandbox_type='celery').inc()
+
+@task_failure.connect
+def task_failure_handler(sender=None, task_id=None, exception=None, **kwargs):
+    logger.error(f"Task failed: {sender.name}", task_id=task_id, exception=str(exception))
+    code_executions_total.labels(status='error', sandbox_type='celery').inc()
+
+Fichier : core/tasks.py (nouveau - définition des tasks)
+
+from core.celery_app import celery_app
+from core.executor import execute_code
+from core.llm import call_llm
+from core.logger import logger
+import pandas as pd
+
+@celery_app.task(name='tasks.process_question', bind=True, max_retries=3)
+def process_question_task(self, question: str, df_json: str, user_id: str):
+    """
+    Task asynchrone pour traiter une question
+    
+    Args:
+        question: Question de l'utilisateur
+        df_json: DataFrame sérialisé en JSON
+        user_id: ID utilisateur pour tracking
+    """
+    
+    try:
+        # Désérialiser le DataFrame
+        df = pd.read_json(df_json)
+        
+        logger.info(
+            "Processing question task",
+            task_id=self.request.id,
+            user_id=user_id,
+            df_shape=df.shape
+        )
+        
+        # Appel LLM
+        code = call_llm(question, df)
+        
+        # Exécution code
+        result = execute_code(code, df)
+        
+        # Serializer le résultat
+        if isinstance(result, pd.DataFrame):
+            result_json = result.to_json()
+        else:
+            result_json = str(result)
+        
+        return {
+            'status': 'success',
+            'result': result_json,
+            'code': code
+        }
+        
+    except Exception as exc:
+        logger.error(
+            "Task failed",
+            task_id=self.request.id,
+            error=str(exc)
+        )
+        
+        # Retry avec backoff exponentiel
+        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+
+@celery_app.task(name='tasks.bulk_export')
+def bulk_export_task(user_id: str, export_format: str):
+    """Export en masse de l'historique utilisateur"""
+    
+    from db.queries import get_user_history
+    
+    history = get_user_history(user_id, limit=1000)
+    
+    if export_format == 'excel':
+        # Export Excel avec formatting
+        from core.excel_formatter import ExcelFormatter
+        formatter = ExcelFormatter()
+        file_path = formatter.export_history(history, user_id)
+        
+        return {'file_path': file_path}
+
+@celery_app.task(name='tasks.cleanup_old_data')
+def cleanup_old_data_task():
+    """Tâche périodique de nettoyage (CRON)"""
+    
+    from db.queries import delete_old_executions
+    from datetime import datetime, timedelta
+    
+    cutoff_date = datetime.now() - timedelta(days=90)
+    deleted_count = delete_old_executions(cutoff_date)
+    
+    logger.info(f"Cleanup completed", deleted_count=deleted_count)
+    
+    return {'deleted_count': deleted_count}
+
+# Configuration des tâches périodiques (CRON)
+celery_app.conf.beat_schedule = {
+    'cleanup-every-day': {
+        'task': 'tasks.cleanup_old_data',
+        'schedule': 86400.0,  # Toutes les 24h
+    },
+}
+
+Utilisation dans Streamlit :
+
+Fichier : pages/3_🤖_Agent.py (modification)
+
+from core.tasks import process_question_task
+import streamlit as st
+
+if st.button("Envoyer"):
+    question = st.session_state.user_question
+    df = st.session_state.df
+    
+    # Sérialiser le DataFrame
+    df_json = df.to_json()
+    
+    # Lancer la task asynchrone
+    task = process_question_task.delay(
+        question=question,
+        df_json=df_json,
+        user_id=st.session_state.user_id
+    )
+    
+    st.info(f"Task lancée : {task.id}")
+    
+    # Polling pour récupérer le résultat
+    with st.spinner("Traitement en cours..."):
+        while not task.ready():
+            time.sleep(0.5)
+        
+        result = task.get()
+        
+        if result['status'] == 'success':
+            st.success("Question traitée !")
+            st.write(result['result'])
+            st.code(result['code'])
+        else:
+            st.error("Erreur lors du traitement")
+
+Docker Compose avec Celery : docker-compose.yml (modification)
+
+version: '3.8'
+
+services:
+  # Service Redis (broker + backend)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Application Streamlit
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+      - "9090:9090"  # Prometheus metrics
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./logs:/app/logs
+
+  # Celery Worker (traitement asynchrone)
+  celery_worker:
+    build: .
+    command: celery -A core.celery_app worker --loglevel=info --concurrency=4
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    deploy:
+      replicas: 3  # 3 workers pour scalabilité
+
+  # Celery Beat (tâches périodiques CRON)
+  celery_beat:
+    build: .
+    command: celery -A core.celery_app beat --loglevel=info
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+
+  # Flower (monitoring Celery)
+  flower:
+    build: .
+    command: celery -A core.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+  # PostgreSQL
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  redis_data:
+  postgres_data:
+
+B. Load Balancing avec NGINX
+Fichier : nginx/nginx.conf (nouveau)
+
+upstream pandas_ai_backend {
+    # Load balancing avec least_conn (envoie au serveur le moins chargé)
+    least_conn;
+    
+    # Pool de serveurs
+    server app1:8501 max_fails=3 fail_timeout=30s;
+    server app2:8501 max_fails=3 fail_timeout=30s;
+    server app3:8501 max_fails=3 fail_timeout=30s;
+    
+    # Health check
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name pandas-ai.com;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name pandas-ai.com;
+    
+    # SSL certificates
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    # Timeouts
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 300s;  # 5 minutes pour questions longues
+    
+    # Rate limiting (100 req/min par IP)
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/m;
+    limit_req zone=api_limit burst=20 nodelay;
+    
+    # Compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript;
+    gzip_min_length 1000;
+    
+    # Location principale
+    location / {
+        proxy_pass http://pandas_ai_backend;
+        
+        # Headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket support (pour Streamlit)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Caching statique
+        location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+    
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "OK\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # Metrics endpoint (Prometheus)
+    location /metrics {
+        proxy_pass http://pandas_ai_backend:9090/metrics;
+        allow 10.0.0.0/8;  # Seulement depuis le réseau interne
+        deny all;
+    }
+}
+
+Docker Compose avec NGINX : (ajout)
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+
+C. Auto-scaling avec Kubernetes HPA
+Déjà montré dans la section CI/CD (fichier k8s/production/deployment.yaml), mais voici les détails :
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pandas-ai-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pandas-ai-app
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  # Auto-scale basé sur CPU
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70  # Scale up si > 70% CPU
+  
+  # Auto-scale basé sur mémoire
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80  # Scale up si > 80% RAM
+  
+  # Auto-scale basé sur métrique custom (requêtes/sec)
+  - type: Pods
+    pods:
+      metric:
+        name: requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"  # Scale up si > 100 req/s par pod
+  
+  # Comportement de scaling
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Attendre 5 min avant de scale down
+      policies:
+      - type: Percent
+        value: 50  # Max 50% de pods retirés à la fois
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale up immédiatement
+      policies:
+      - type: Percent
+        value: 100  # Doubler le nombre de pods si nécessaire
+        periodSeconds: 15
+      - type: Pods
+        value: 5  # Ou ajouter max 5 pods à la fois
+        periodSeconds: 15
+      selectPolicy: Max  # Prendre le plus agressif
+
+6️⃣ MONITORING : Dashboards Grafana, Alertes PagerDuty
+🎯 Ce qu'il faut ajouter
+A. Grafana Dashboards
+Fichier : grafana/dashboards/overview.json (nouveau)
+
+{
+  "dashboard": {
+    "title": "Open Pandas-AI - Overview",
+    "panels": [
+      {
+        "title": "Questions par Minute",
+        "targets": [{
+          "expr": "rate(pandas_ai_questions_total[5m])"
+        }],
+        "type": "graph"
+      },
+      {
+        "title": "Taux d'Erreur (%)",
+        "targets": [{
+          "expr": "(rate(pandas_ai_questions_total{status=\"error\"}[5m]) / rate(pandas_ai_questions_total[5m])) * 100"
+        }],
+        "type": "singlestat",
+        "thresholds": "5,10"
+      },
+      {
+        "title": "P95 Latency",
+        "targets": [{
+          "expr": "histogram_quantile(0.95, rate(pandas_ai_question_duration_seconds_bucket[5m]))"
+        }],
+        "type": "graph"
+      },
+      {
+        "title": "Utilisateurs Actifs",
+        "targets": [{
+          "expr": "pandas_ai_active_users"
+        }],
+        "type": "singlestat"
+      },
+      {
+        "title": "Tokens LLM Consommés (par heure)",
+        "targets": [{
+          "expr": "rate(pandas_ai_llm_tokens_total[1h])"
+        }],
+        "type": "graph"
+      },
+      {
+        "title": "Questions par Domaine",
+        "targets": [{
+          "expr": "sum by (domain) (rate(pandas_ai_questions_total[5m]))"
+        }],
+        "type": "piechart"
+      }
+    ]
+  }
+}
+
+Docker Compose avec Grafana : (ajout)
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+  
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+volumes:
+  grafana_data:
+  prometheus_data:
+
+7️⃣ COMPLIANCE : Audit Logs, GDPR, Encryption
+🎯 Ce qu'il faut ajouter
+A. Audit Logs
+Fichier : core/audit_logger.py (nouveau)
+
+from core.logger import logger
+from db.models import AuditLog
+from db.session import get_db_session
+from datetime import datetime
+from typing import Optional
+
+class AuditLogger:
+    """Logger d'audit pour traçabilité GDPR"""
+    
+    @staticmethod
+    def log_event(
+        user_id: str,
+        action: str,
+        resource_type: str,
+        resource_id: Optional[str] = None,
+        details: Optional[dict] = None,
+        ip_address: Optional[str] = None
+    ):
+        """
+        Log un événement d'audit
+        
+        Actions possibles:
+        - user.login
+        - user.logout
+        - file.upload
+        - file.delete
+        - question.ask
+        - data.export
+        - data.access
+        - settings.change
+        """
+        
+        with get_db_session() as session:
+            audit_log = AuditLog(
+                timestamp=datetime.utcnow(),
+                user_id=user_id,
+                action=action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                details=details,
+                ip_address=ip_address
+            )
+            
+            session.add(audit_log)
+            session.commit()
+        
+        # Log également pour monitoring
+        logger.info(
+            "Audit event",
+            user_id=user_id,
+            action=action,
+            resource_type=resource_type
+        )
+
+# Utilisation
+def upload_file_handler(file, user_id, request):
+    """Handler d'upload avec audit"""
+    
+    # Upload le fichier
+    file_id = save_file(file)
+    
+    # Log audit
+    AuditLogger.log_event(
+        user_id=user_id,
+        action="file.upload",
+        resource_type="csv_file",
+        resource_id=file_id,
+        details={
+            "filename": file.name,
+            "size_bytes": file.size
+        },
+        ip_address=request.client.host
+    )
+
+Modèle DB : db/models.py (ajout)
+
+from sqlalchemy import Column, String, DateTime, JSON
+
+class AuditLog(Base):
+    __tablename__ = 'audit_logs'
+    
+    id = Column(String, primary_key=True)
+    timestamp = Column(DateTime, nullable=False)
+    user_id = Column(String, nullable=False, index=True)
+    action = Column(String, nullable=False, index=True)
+    resource_type = Column(String, nullable=False)
+    resource_id = Column(String, nullable=True)
+    details = Column(JSON, nullable=True)
+    ip_address = Column(String, nullable=True)
+
+B. GDPR Compliance - Droit à l'oubli
+Fichier : core/gdpr_compliance.py (nouveau)
+
+from db.session import get_db_session
+from db.models import User, UploadedFile, Question, AuditLog
+from core.audit_logger import AuditLogger
+
+class GDPRCompliance:
+    """Gestion de la conformité GDPR"""
+    
+    @staticmethod
+    def anonymize_user_data(user_id: str, requesting_user_id: str):
+        """
+        Anonymise toutes les données d'un utilisateur (droit à l'oubli)
+        
+        IMPORTANT: Garder les logs d'audit pour raisons légales
+        """
+        
+        with get_db_session() as session:
+            # 1. Anonymiser les données utilisateur
+            user = session.query(User).filter_by(id=user_id).first()
+            if user:
+                user.email = f"anonymized_{user_id}@deleted.com"
+                user.name = "Utilisateur Supprimé"
+                user.is_anonymized = True
+            
+            # 2. Supprimer les fichiers uploadés
+            files = session.query(UploadedFile).filter_by(user_id=user_id).all()
+            for file in files:
+                session.delete(file)
+            
+            # 3. Anonymiser les questions (garder pour statistiques)
+            questions = session.query(Question).filter_by(user_id=user_id).all()
+            for q in questions:
+                q.user_id = "anonymized"
+                q.question_text = "[REDACTED]"
+            
+            session.commit()
+        
+        # Log audit de la suppression
+        AuditLogger.log_event(
+            user_id=requesting_user_id,
+            action="user.gdpr_delete",
+            resource_type="user",
+            resource_id=user_id,
+            details={"reason": "User requested data deletion (GDPR Article 17)"}
+        )
+    
+    @staticmethod
+    def export_user_data(user_id: str) -> dict:
+        """
+        Exporte toutes les données d'un utilisateur (droit à la portabilité)
+        
+        GDPR Article 20
+        """
+        
+        with get_db_session() as session:
+            user = session.query(User).filter_by(id=user_id).first()
+            files = session.query(UploadedFile).filter_by(user_id=user_id).all()
+            questions = session.query(Question).filter_by(user_id=user_id).all()
+            
+            export_data = {
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                    "created_at": user.created_at.isoformat()
+                },
+                "files": [
+                    {
+                        "id": f.id,
+                        "filename": f.filename,
+                        "uploaded_at": f.uploaded_at.isoformat()
+                    }
+                    for f in files
+                ],
+                "questions": [
+                    {
+                        "id": q.id,
+                        "question": q.question_text,
+                        "asked_at": q.created_at.isoformat(),
+                        "result": q.result
+                    }
+                    for q in questions
+                ]
+            }
+        
+        # Log audit
+        AuditLogger.log_event(
+            user_id=user_id,
+            action="user.gdpr_export",
+            resource_type="user",
+            resource_id=user_id
+        )
+        
+        return export_data
+
+C. Encryption at Rest
+Configuration PostgreSQL avec chiffrement :
+
+Fichier : db/encryption.py (nouveau)
+
+from cryptography.fernet import Fernet
+import os
+
+# Générer une clé de chiffrement (stocker dans secrets manager)
+ENCRYPTION_KEY = os.getenv('DATA_ENCRYPTION_KEY').encode()
+cipher = Fernet(ENCRYPTION_KEY)
+
+def encrypt_sensitive_data(data: str) -> str:
+    """Chiffre des données sensibles avant stockage en DB"""
+    return cipher.encrypt(data.encode()).decode()
+
+def decrypt_sensitive_data(encrypted_data: str) -> str:
+    """Déchiffre des données sensibles après lecture DB"""
+    return cipher.decrypt(encrypted_data.encode()).decode()
+
+# Utilisation dans les modèles SQLAlchemy
+from sqlalchemy import TypeDecorator, String
+
+class EncryptedString(TypeDecorator):
+    """Type SQLAlchemy pour colonnes chiffrées"""
+    
+    impl = String
+    cache_ok = True
+    
+    def process_bind_param(self, value, dialect):
+        """Avant insertion en DB : chiffrer"""
+        if value is not None:
+            return encrypt_sensitive_data(value)
+        return value
+    
+    def process_result_value(self, value, dialect):
+        """Après lecture DB : déchiffrer"""
+        if value is not None:
+            return decrypt_sensitive_data(value)
+        return value
+
+# Modèle avec données chiffrées
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(String, primary_key=True)
+    email = Column(EncryptedString(255), nullable=False)  # Chiffré !
+    api_key = Column(EncryptedString(500), nullable=True)  # Chiffré !
+
+📦 Résumé : Nouvelles Dépendances Totales
+Voici le fichier requirements-production.txt complet :
+
+# === Existantes ===
+altair==5.5.0
+pandas==2.2.3
+streamlit==1.45.1
+SQLAlchemy==2.0.41
+docker==7.0.0
+# ... (toutes les autres existantes)
+
+# === TESTS ===
+pytest==8.3.2
+pytest-cov==5.0.0
+pytest-asyncio==0.23.5
+pytest-mock==3.12.0
+pytest-xdist==3.5.0
+coverage==7.4.3
+locust==2.23.1
+playwright==1.41.2
+faker==24.0.0
+freezegun==1.4.0
+responses==0.25.0
+
+# === CI/CD ===
+black==24.2.0
+flake8==7.0.0
+isort==5.13.2
+mypy==1.8.0
+bandit==1.7.7
+safety==3.0.1
+
+# === OBSERVABILITÉ ===
+loguru==0.7.2
+python-json-logger==2.0.7
+prometheus-client==0.20.0
+opentelemetry-api==1.23.0
+opentelemetry-sdk==1.23.0
+opentelemetry-instrumentation-requests==0.44b0
+opentelemetry-exporter-jaeger==1.23.0
+
+# === PERFORMANCE ===
+redis==5.0.1
+redis-om==0.2.1
+aiohttp==3.9.3
+aiofiles==23.2.1
+
+# === SCALABILITÉ ===
+celery[redis]==5.3.6
+flower==2.0.1
+
+# === COMPLIANCE ===
+cryptography==42.0.2
+
+Conclusion : Avec ces ajouts, votre projet passerait d'un niveau Senior (7-8/10) à Expert/Lead (9-10/10), prêt pour un environnement de production à grande échelle avec des milliers d'utilisateurs simultanés, une observabilité complète, et une conformité GDPR.
+
